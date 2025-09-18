@@ -1,43 +1,1368 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Web site created using create-react-app"
-    />
-    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
-    <!--
-      manifest.json provides metadata used when your web app is installed on a
-      user's mobile device or desktop. See https://developers.google.com/web/fundamentals/web-app-manifest/
-    -->
-    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <!--
-      Notice the use of %PUBLIC_URL% in the tags above.
-      It will be replaced with the URL of the `public` folder during the build.
-      Only files inside the `public` folder can be referenced from the HTML.
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Monitoring System - South78</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3a0ca3;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --warning: #fca311;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --border-radius: 12px;
+            --box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            --transition: all 0.3s ease;
+        }
 
-      Unlike "/favicon.ico" or "favicon.ico", "%PUBLIC_URL%/favicon.ico" will
-      work correctly both with client-side routing and a non-root public URL.
-      Learn how to configure a non-root public URL by running `npm run build`.
-    -->
-    <title>React App</title>
-  </head>
-  <body>
-    <noscript>You need to enable JavaScript to run this app.</noscript>
-    <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
 
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
-  </body>
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 25px;
+            transition: var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            color: var(--primary);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-gray);
+            font-size: 1.4rem;
+        }
+
+        .card-title i {
+            margin-right: 12px;
+            font-size: 1.4rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--light-gray);
+            border-radius: 8px;
+            font-size: 16px;
+            transition: var(--transition);
+        }
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+        }
+
+        input[readonly] {
+            background-color: var(--light-gray);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 14px 25px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+
+        .btn i {
+            margin-right: 8px;
+        }
+
+        .btn-success {
+            background: var(--success);
+        }
+
+        .btn-success:hover {
+            background: #3a9fc7;
+        }
+
+        .btn-danger {
+            background: var(--danger);
+        }
+
+        .btn-danger:hover {
+            background: #d1146a;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+        }
+
+        .btn-warning:hover {
+            background: #e59400;
+        }
+
+        .counter-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+
+        .counter-value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            min-width: 100px;
+            text-align: center;
+        }
+
+        .counter-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .recent-counts {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .count-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 12px;
+            background: var(--light);
+            border-radius: 8px;
+            transition: var(--transition);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .count-item:hover {
+            background: #e6eef7;
+            transform: translateX(5px);
+        }
+
+        .count-info {
+            flex: 1;
+        }
+
+        .count-id {
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .count-name {
+            color: var(--gray);
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .count-numbers {
+            text-align: right;
+        }
+
+        .physical-qty {
+            font-weight: bold;
+            font-size: 1.2rem;
+        }
+
+        .variance {
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin-top: 5px;
+            display: inline-block;
+        }
+
+        .variance.positive {
+            background: #e6f7ee;
+            color: #0a9955;
+        }
+
+        .variance.negative {
+            background: #fde8ec;
+            color: #d1146a;
+        }
+
+        .variance.zero {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .count-time {
+            color: var(--gray);
+            font-size: 0.8rem;
+            margin-top: 5px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--gray);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            color: var(--light-gray);
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            text-align: center;
+            box-shadow: var(--box-shadow);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(67, 97, 238, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary);
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .message i {
+            margin-right: 10px;
+            font-size: 1.2rem;
+        }
+
+        .message.success {
+            background: #e6f7ee;
+            color: #0a9955;
+            border-left: 4px solid #0a9955;
+        }
+
+        .message.error {
+            background: #fde8ec;
+            color: #d1146a;
+            border-left: 4px solid #d1146a;
+        }
+
+        .message.info {
+            background: #e8f4fd;
+            color: #0c6dfd;
+            border-left: 4px solid #0c6dfd;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            background: var(--light);
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .filter-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .search-box i {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+        }
+
+        .search-box input {
+            padding-left: 45px;
+        }
+
+        .system-status {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            background: #e6f7ee;
+            color: #0a9955;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .system-status.error {
+            background: #fde8ec;
+            color: #d1146a;
+        }
+
+        .system-status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .system-status i {
+            margin-right: 10px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .refresh-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 15px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-top: 15px;
+        }
+
+        .refresh-btn:hover {
+            background: var(--secondary);
+        }
+
+        .refresh-btn i {
+            margin-right: 8px;
+        }
+
+        .inventory-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .inventory-table th, .inventory-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .inventory-table th {
+            background-color: var(--light);
+            font-weight: 600;
+        }
+
+        .inventory-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .submit-loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+        }
+
+        .debug-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff4e5;
+            border-radius: 8px;
+            border-left: 4px solid #ffa94d;
+        }
+
+        .debug-btn {
+            background: #ffa94d;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+            margin-right: 10px;
+        }
+
+        .debug-btn:hover {
+            background: #ff922b;
+        }
+
+        .troubleshooting-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 8px;
+            border-left: 4px solid var(--gray);
+        }
+
+        .troubleshooting-section h3 {
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .troubleshooting-section ul {
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+
+        .troubleshooting-section li {
+            margin-bottom: 8px;
+        }
+
+        .connection-test {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+
+        .connection-test-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        .connection-test-result {
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .connection-test-result.success {
+            background: #e6f7ee;
+            color: #0a9955;
+        }
+
+        .connection-test-result.error {
+            background: #fde8ec;
+            color: #d1146a;
+        }
+
+        .manual-input-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e6f7ee;
+            border-radius: 8px;
+            border-left: 4px solid #0a9955;
+        }
+
+        .manual-input-section h3 {
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .manual-item {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .manual-item input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid var(--light-gray);
+            border-radius: 4px;
+        }
+
+        .add-item-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-boxes"></i> Inventory Monitoring System</h1>
+            <p class="subtitle">South78 - Physical Count Management</p>
+        </header>
+
+        <div id="systemStatus" class="system-status">
+            <i class="fas fa-sync fa-spin"></i>
+            <span>Connecting to Google Sheets...</span>
+        </div>
+
+        <div id="message" class="message hidden"></div>
+
+        <div class="troubleshooting-section">
+            <h3><i class="fas fa-tools"></i> Connection Test</h3>
+            <div class="connection-test">
+                <button class="connection-test-btn" onclick="testConnection()">
+                    <i class="fas fa-plug"></i> Test Connection
+                </button>
+                <div id="connectionTestResult" class="connection-test-result"></div>
+            </div>
+        </div>
+
+        <div class="manual-input-section">
+            <h3><i class="fas fa-edit"></i> Manual Item Entry</h3>
+            <p>If no items are loading, you can add them manually:</p>
+            <div class="manual-item">
+                <input type="text" id="manualItemId" placeholder="Item ID">
+                <input type="text" id="manualItemName" placeholder="Item Name">
+                <input type="number" id="manualItemStock" placeholder="Stock" min="0">
+                <button class="add-item-btn" onclick="addManualItem()">
+                    <i class="fas fa-plus"></i> Add Item
+                </button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-clipboard-list"></i> Submit Count</h2>
+
+                <div class="form-group">
+                    <label for="itemSearchInput">Search and Select Item</label>
+                    <input type="text" id="itemSearchInput" list="itemList" oninput="handleItemSelection()" placeholder="Type to search for an item..." class="form-control">
+                    <datalist id="itemList">
+                        <!-- Options will be populated by JavaScript -->
+                    </datalist>
+                </div>
+
+                <div class="form-group">
+                    <label for="itemName">Item Name</label>
+                    <input type="text" id="itemName" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="currentStock">Current Stock (System)</label>
+                    <input type="text" id="currentStock" readonly>
+                </div>
+
+                <div class="form-group">
+                    <label for="physicalQty">Physical Quantity</label>
+                    <div class="counter-controls">
+                        <button class="btn btn-danger counter-btn" onclick="adjustCount(-1)">-</button>
+                        <div class="counter-value">0</div>
+                        <button class="btn btn-success counter-btn" onclick="adjustCount(1)">+</button>
+                    </div>
+                    <input type="number" id="physicalQty" min="0" value="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea id="notes" placeholder="Add any notes here..." rows="2"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="photoProof">Photo Proof (Optional)</label>
+                    <input type="file" id="photoProof" accept="image/*" capture="environment" style="padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+                </div>
+
+                <button class="btn" onclick="submitCount()" id="submitBtn">
+                    <i class="fas fa-paper-plane"></i> Submit Count
+                </button>
+                <button class="btn btn-warning" onclick="resetForm()">
+                    <i class="fas fa-redo"></i> Reset Form
+                </button>
+            </div>
+
+            <div class="card">
+                <h2 class="card-title"><i class="fas fa-history"></i> Recent Counts</h2>
+
+                <div class="filters">
+                    <button class="filter-btn active" onclick="filterCounts('all', this)">All</button>
+                    <button class="filter-btn" onclick="filterCounts('positive', this)">Positive Variance</button>
+                    <button class="filter-btn" onclick="filterCounts('negative', this)">Negative Variance</button>
+                    <button class="filter-btn" onclick="filterCounts('zero', this)">Zero Variance</button>
+                </div>
+
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="searchInput" placeholder="Search items..." oninput="filterCounts()">
+                </div>
+
+                <div id="recentCounts" class="recent-counts">
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No counts submitted yet</p>
+                    </div>
+                </div>
+
+                <button class="refresh-btn" onclick="loadRecentCounts()">
+                    <i class="fas fa-sync-alt"></i> Refresh Counts
+                </button>
+
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <div class="stat-label">Today's Counts</div>
+                        <div id="todayCount" class="stat-value">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Variance Rate</div>
+                        <div id="varianceRate" class="stat-value">0%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Accuracy</div>
+                        <div id="accuracyRate" class="stat-value">100%</div>
+                    </div>
+                </div>
+
+                <div class="debug-section">
+                    <h3><i class="fas fa-bug"></i> Debug Tools</h3>
+                    <p>If counts aren't loading, try these tools:</p>
+                    <button class="debug-btn" onclick="loadSampleData()">
+                        <i class="fas fa-vial"></i> Load Sample Data
+                    </button>
+                    <button class="debug-btn" onclick="clearAllData()">
+                        <i class="fas fa-trash"></i> Clear All Data
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 class="card-title"><i class="fas fa-database"></i> Inventory Data</h2>
+            <p>This table shows the inventory data from the main sheet.</p>
+
+            <div class="form-group">
+                <input type="text" id="inventorySearch" oninput="filterInventoryTable()" placeholder="Search inventory table...">
+            </div>
+
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Item ID</th>
+                        <th>Item Name</th>
+                        <th>Current Stock</th>
+                    </tr>
+                </thead>
+                <tbody id="inventoryTableBody">
+                    <!-- Will be populated by JavaScript -->
+                </tbody>
+            </table>
+
+            <button class="refresh-btn" onclick="loadInventoryData()">
+                <i class="fas fa-sync-alt"></i> Refresh Inventory Data
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let state = {
+            currentCount: 0,
+            inventoryData: [],
+            recentCounts: [],
+            filteredCounts: [],
+            systemReady: false,
+            isLoading: false,
+            isSubmitting: false,
+            connectionTested: false
+        };
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set a timeout to show connection issues
+            setTimeout(() => {
+                if (!state.connectionTested) {
+                    document.getElementById('systemStatus').innerHTML =
+                        '<i class="fas fa-exclamation-triangle"></i><span>Having trouble connecting. Using sample data.</span>';
+                    document.getElementById('systemStatus').classList.add('warning');
+                    loadSampleInventoryData();
+                }
+            }, 5000);
+
+            loadInventoryData();
+            loadRecentCounts();
+
+            // Set up event listeners
+            document.getElementById('physicalQty').addEventListener('input', handlePhysicalQtyInput);
+        });
+
+        // Test connection to Google Sheets
+        function testConnection() {
+            const resultEl = document.getElementById('connectionTestResult');
+            resultEl.textContent = 'Testing connection...';
+            resultEl.className = 'connection-test-result';
+
+            try {
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        state.connectionTested = true;
+                        if (response.success) {
+                            resultEl.textContent = 'Connection successful!';
+                            resultEl.classList.add('success');
+                            document.getElementById('systemStatus').innerHTML =
+                                '<i class="fas fa-check-circle"></i><span>Connected to Google Sheets</span>';
+                            loadInventoryData();
+                        } else {
+                            resultEl.textContent = 'Connection failed: ' + response.message;
+                            resultEl.classList.add('error');
+                            document.getElementById('systemStatus').innerHTML =
+                                '<i class="fas fa-exclamation-circle"></i><span>Connection Error: ' + response.message + '</span>';
+                            document.getElementById('systemStatus').classList.add('error');
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        state.connectionTested = true;
+                        resultEl.textContent = 'Connection error: ' + error;
+                        resultEl.classList.add('error');
+                        document.getElementById('systemStatus').innerHTML =
+                            '<i class="fas fa-exclamation-circle"></i><span>Connection Error: ' + error + '</span>';
+                        document.getElementById('systemStatus').classList.add('error');
+                    })
+                    .getSystemStatus();
+            } catch (error) {
+                state.connectionTested = true;
+                resultEl.textContent = 'Connection error: ' + error;
+                resultEl.classList.add('error');
+                document.getElementById('systemStatus').innerHTML =
+                    '<i class="fas fa-exclamation-circle"></i><span>Connection Error: ' + error + '</span>';
+                document.getElementById('systemStatus').classList.add('error');
+            }
+        }
+
+        // Load inventory data from Google Sheets
+        function loadInventoryData() {
+            showMessage('Loading inventory data from Google Sheets...', 'info');
+
+            try {
+                // This would call your Google Apps Script function
+                google.script.run
+                    .withSuccessHandler(function(response) {
+                        if (response.success) {
+                            state.inventoryData = response.items || response.data || [];
+                            populateItemDatalist(state.inventoryData);
+                            populateInventoryTable(state.inventoryData);
+
+                            if (state.inventoryData.length > 0) {
+                                showSuccess('Inventory data loaded successfully! ' + state.inventoryData.length + ' items found.');
+                                document.getElementById('systemStatus').innerHTML = '<i class="fas fa-check-circle"></i><span>Connected to Google Sheets</span>';
+                            } else {
+                                showError('No inventory data found in sheet. Using sample data.');
+                                document.getElementById('systemStatus').innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>No data found. Using sample data.</span>';
+                                document.getElementById('systemStatus').classList.add('warning');
+                                loadSampleInventoryData();
+                            }
+
+                            state.systemReady = true;
+                            state.connectionTested = true;
+                        } else {
+                            showError('Failed to load inventory data: ' + response.error);
+                            document.getElementById('systemStatus').innerHTML = '<i class="fas fa-exclamation-circle"></i><span>Error: ' + response.error + '</span>';
+                            document.getElementById('systemStatus').classList.add('error');
+                            loadSampleInventoryData();
+                        }
+                    })
+                    .withFailureHandler(function(error) {
+                        showError('Error loading inventory data: ' + error);
+                        document.getElementById('systemStatus').innerHTML = '<i class="fas fa-exclamation-circle"></i><span>Connection Error: ' + error + '</span>';
+                        document.getElementById('systemStatus').classList.add('error');
+                        loadSampleInventoryData();
+                    })
+                    .getAllItems();
+            } catch (error) {
+                showError('Error calling Google Apps Script: ' + error);
+                document.getElementById('systemStatus').innerHTML = '<i class="fas fa-exclamation-circle"></i><span>Error: Google Apps Script not available</span>';
+                document.getElementById('systemStatus').classList.add('error');
+                loadSampleInventoryData();
+            }
+        }
+
+        // Load sample inventory data for demonstration
+        function loadSampleInventoryData() {
+            const sampleData = [
+                { id: "F100101240017", name: "FLOWER DIMITHUS PIN 64CM", stock: 31 },
+                { id: "F100101220008", name: "FLOWER DAHLIA ORA 57CM", stock: 1 },
+                { id: "F100101220015", name: "FLOWER ROSE RED 50CM", stock: 12 },
+                { id: "F100101220028", name: "FLOWER TULIP WHITE 45CM", stock: 8 },
+                { id: "F100101220035", name: "FLOWER SUNFLOWER YELLOW 70CM", stock: 5 }
+            ];
+
+            state.inventoryData = sampleData;
+            populateItemDatalist(state.inventoryData);
+            populateInventoryTable(state.inventoryData);
+            showSuccess('Using sample inventory data for demonstration');
+            document.getElementById('systemStatus').innerHTML = '<i class="fas fa-info-circle"></i><span>Using sample data (offline mode)</span>';
+            document.getElementById('systemStatus').classList.remove('error');
+            document.getElementById('systemStatus').classList.add('warning');
+        }
+
+        // Add item manually
+        function addManualItem() {
+            const itemId = document.getElementById('manualItemId').value.trim();
+            const itemName = document.getElementById('manualItemName').value.trim();
+            const itemStock = document.getElementById('manualItemStock').value;
+
+            if (!itemId || !itemName || !itemStock) {
+                showError('Please fill in all fields for the manual item');
+                return;
+            }
+
+            const newItem = {
+                id: itemId,
+                name: itemName,
+                stock: parseInt(itemStock) || 0
+            };
+
+            state.inventoryData.push(newItem);
+            populateItemDatalist(state.inventoryData);
+            populateInventoryTable(state.inventoryData);
+
+            document.getElementById('manualItemId').value = '';
+            document.getElementById('manualItemName').value = '';
+            document.getElementById('manualItemStock').value = '';
+
+            showSuccess('Item added manually: ' + itemId);
+        }
+
+        // Populate the item datalist for the autocomplete input
+        function populateItemDatalist(data) {
+            const datalist = document.getElementById('itemList');
+            datalist.innerHTML = ''; // Clear old options
+
+            if (!data || data.length === 0) {
+                return; // No data, nothing to populate
+            }
+
+            // Add items to the datalist
+            data.forEach(item => {
+                const option = document.createElement('option');
+                option.value = `${item.id} - ${item.name}`;
+                datalist.appendChild(option);
+            });
+
+            console.log('Datalist populated with', data.length, 'items');
+        }
+
+        // Populate the inventory table
+        function populateInventoryTable(data) {
+            const tableBody = document.getElementById('inventoryTableBody');
+            tableBody.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No inventory data available</td></tr>';
+                return;
+            }
+
+            // Add rows to table
+            data.forEach(item => {
+                const row = document.createElement('tr');
+
+                const idCell = document.createElement('td');
+                idCell.textContent = item.id;
+
+                const nameCell = document.createElement('td');
+                nameCell.textContent = item.name;
+
+                const stockCell = document.createElement('td');
+                stockCell.textContent = item.stock;
+
+                row.appendChild(idCell);
+                row.appendChild(nameCell);
+                row.appendChild(stockCell);
+
+                tableBody.appendChild(row);
+            });
+        }
+
+        // Handle item selection from the autocomplete input
+        function handleItemSelection() {
+            const inputValue = document.getElementById('itemSearchInput').value;
+            const selectedItem = state.inventoryData.find(item => `${item.id} - ${item.name}` === inputValue);
+
+            if (selectedItem) {
+                document.getElementById('itemName').value = selectedItem.name;
+                document.getElementById('currentStock').value = selectedItem.stock;
+            } else {
+                // Clear the fields if the input doesn't exactly match an item
+                document.getElementById('itemName').value = '';
+                document.getElementById('currentStock').value = '';
+            }
+        }
+
+        // Handle physical quantity input
+        function handlePhysicalQtyInput() {
+            const value = parseInt(document.getElementById('physicalQty').value) || 0;
+            state.currentCount = value;
+            document.querySelector('.counter-value').textContent = state.currentCount;
+        }
+
+        // Adjust count with buttons
+        function adjustCount(change) {
+            state.currentCount += change;
+            if (state.currentCount < 0) state.currentCount = 0;
+            document.querySelector('.counter-value').textContent = state.currentCount;
+            document.getElementById('physicalQty').value = state.currentCount;
+        }
+
+        // New two-step submit process to handle photo uploads
+        function submitCount() {
+            if (state.isSubmitting) return;
+
+            // --- Form Validation ---
+            const fullInputValue = document.getElementById('itemSearchInput').value;
+            const itemId = fullInputValue.split(' - ')[0].trim();
+
+            const physicalQty = document.getElementById('physicalQty').value;
+
+            if (!itemId) {
+                showError('Please select a valid item from the list');
+                return;
+            }
+            if (physicalQty === '' || physicalQty < 0) {
+                showError('Please enter a valid physical quantity');
+                return;
+            }
+            const selectedItem = state.inventoryData.find(item => item.id === itemId);
+            if (!selectedItem) {
+                showError('Selected item not found in inventory. Please select from the list.');
+                return;
+            }
+            // --- End Validation ---
+
+            state.isSubmitting = true;
+            const submitBtn = document.getElementById('submitBtn');
+            const originalBtnHtml = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="submit-loading"></span> Submitting...';
+            submitBtn.disabled = true;
+
+            const photoInput = document.getElementById('photoProof');
+            const photoFile = photoInput.files[0];
+
+            if (photoFile) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Image = e.target.result;
+                    submitBtn.innerHTML = '<span class="submit-loading"></span> Uploading Photo...';
+                    google.script.run
+                        .withSuccessHandler(function(uploadResponse) {
+                            if (uploadResponse.success) {
+                                submitCountData(uploadResponse.url, submitBtn, originalBtnHtml);
+                            } else {
+                                showError('Photo upload failed: ' + uploadResponse.error);
+                                submitBtn.innerHTML = originalBtnHtml;
+                                submitBtn.disabled = false;
+                                state.isSubmitting = false;
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            showError('Photo upload failed: ' + error.message);
+                            submitBtn.innerHTML = originalBtnHtml;
+                            submitBtn.disabled = false;
+                            state.isSubmitting = false;
+                        })
+                        .uploadPhoto(base64Image, photoFile.name, photoFile.type);
+                };
+                reader.onerror = function(error) {
+                    showError('Error reading file: ' + error);
+                    submitBtn.innerHTML = originalBtnHtml;
+                    submitBtn.disabled = false;
+                    state.isSubmitting = false;
+                };
+                reader.readAsDataURL(photoFile);
+            } else {
+                submitCountData('', submitBtn, originalBtnHtml);
+            }
+        }
+
+        // Helper function to submit the final count data
+        function submitCountData(photoUrl, submitBtn, originalBtnHtml) {
+            const fullInputValue = document.getElementById('itemSearchInput').value;
+            const itemId = fullInputValue.split(' - ')[0].trim();
+            const physicalQty = document.getElementById('physicalQty').value;
+            const selectedItem = state.inventoryData.find(item => item.id === itemId);
+
+            const formData = {
+                itemId: itemId,
+                itemName: selectedItem.name,
+                currentStock: selectedItem.stock,
+                physicalQty: parseInt(physicalQty),
+                notes: document.getElementById('notes').value,
+                photoUrl: photoUrl || ''
+            };
+
+            submitBtn.innerHTML = '<span class="submit-loading"></span> Saving Count...';
+
+            google.script.run
+                .withSuccessHandler(function(submitResponse) {
+                    if (submitResponse.success) {
+                        showSuccess('Count submitted successfully! Variance: ' + submitResponse.variance);
+                        resetForm();
+                        loadRecentCounts();
+                    } else {
+                        showError('Failed to submit count: ' + submitResponse.error);
+                    }
+                    submitBtn.innerHTML = originalBtnHtml;
+                    submitBtn.disabled = false;
+                    state.isSubmitting = false;
+                })
+                .withFailureHandler(function(error) {
+                    showError('Error submitting count: ' + error.message);
+                    submitBtn.innerHTML = originalBtnHtml;
+                    submitBtn.disabled = false;
+                    state.isSubmitting = false;
+                })
+                .submitCount(formData);
+        }
+
+        // Reset form
+        function resetForm() {
+            document.getElementById('itemSearchInput').value = '';
+            document.getElementById('itemName').value = '';
+            document.getElementById('currentStock').value = '';
+            document.getElementById('physicalQty').value = '0';
+            document.getElementById('notes').value = '';
+            document.getElementById('photoProof').value = '';
+            state.currentCount = 0;
+            document.querySelector('.counter-value').textContent = '0';
+        }
+
+        // Load recent counts from Google Sheets
+        function loadRecentCounts() {
+            if (state.isLoading) return;
+            state.isLoading = true;
+
+            console.log("Frontend: Starting to load recent counts...");
+
+            // Show loading state in UI
+            document.getElementById('recentCounts').innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-sync fa-spin"></i>
+                    <p>Loading counts...</p>
+                </div>
+            `;
+            const refreshBtn = document.querySelector('.refresh-btn');
+            const originalHtml = refreshBtn.innerHTML;
+            refreshBtn.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Loading...';
+            refreshBtn.disabled = true;
+
+            google.script.run
+                .withSuccessHandler(function(response) {
+                    console.log("Frontend: Received response from getRecentSubmissions:", response);
+                    state.isLoading = false;
+                    refreshBtn.innerHTML = originalHtml;
+                    refreshBtn.disabled = false;
+
+                    try {
+                        if (response && response.success) {
+                            if (response.counts && response.counts.length > 0) {
+                                console.log(`Frontend: Success! Found ${response.counts.length} counts.`);
+                                state.recentCounts = response.counts;
+                                displayRecentCounts(state.recentCounts);
+                                updateStats(state.recentCounts);
+                            } else {
+                                console.log("Frontend: Success, but no counts were returned.");
+                                document.getElementById('recentCounts').innerHTML =
+                                    '<div class="empty-state"><i class="fas fa-inbox"></i><p>No counts submitted yet</p></div>';
+                                updateStats([]);
+                            }
+                        } else {
+                            console.error("Frontend: The backend call was not successful.", response ? response.error : 'No response object');
+                            showError('Failed to load counts: ' + (response ? response.error : 'Unknown error'));
+                        }
+                    } catch (e) {
+                        console.error("Frontend: Error processing success response:", e);
+                        showError('An error occurred while displaying the counts.');
+                    }
+                })
+                .withFailureHandler(function(error) {
+                    console.error("Frontend: The backend call failed entirely.", error);
+                    state.isLoading = false;
+                    refreshBtn.innerHTML = originalHtml;
+                    refreshBtn.disabled = false;
+                    showError('Error loading counts: ' + error.message);
+                })
+                .getRecentSubmissions(20);
+        }
+
+        // Display recent counts in the UI
+        function displayRecentCounts(counts) {
+            const container = document.getElementById('recentCounts');
+
+            if (!counts || counts.length === 0) {
+                container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><p>No counts submitted yet</p></div>';
+                return;
+            }
+
+            let html = '';
+
+            counts.forEach(count => {
+                const timestamp = new Date(count.timestamp);
+                const timeString = timestamp.toLocaleDateString() + ' ' + timestamp.toLocaleTimeString();
+                const varianceClass = count.variance > 0 ? 'positive' : (count.variance < 0 ? 'negative' : 'zero');
+
+                html += `
+                    <div class="count-item">
+                        <div class="count-info">
+                            <div class="count-id">${count.itemId || 'N/A'}</div>
+                            <div class="count-name">${count.itemName || 'N/A'}</div>
+                            <div class="count-time">${timeString}</div>
+                        </div>
+                        <div class="count-numbers">
+                            <div>System: ${count.currentStock || 0}</div>
+                            <div class="physical-qty">Counted: ${count.physicalQty || 0}</div>
+                            <div class="variance ${varianceClass}">
+                                Variance: ${count.variance >= 0 ? '+' : ''}${count.variance || 0}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            state.filteredCounts = counts;
+        }
+
+        // Filter counts based on criteria
+        function filterCounts(filter, element) {
+            if (element) { // A button was clicked
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                element.classList.add('active');
+            }
+
+            const activeFilter = document.querySelector('.filter-btn.active').getAttribute('onclick').match(/'(.*?)'/)[1];
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            let filtered = state.recentCounts;
+
+            if (activeFilter === 'positive') {
+                filtered = filtered.filter(count => count.variance > 0);
+            } else if (activeFilter === 'negative') {
+                filtered = filtered.filter(count => count.variance < 0);
+            } else if (activeFilter === 'zero') {
+                filtered = filtered.filter(count => count.variance === 0);
+            }
+
+            if (searchTerm) {
+                filtered = filtered.filter(count =>
+                    (count.itemId && count.itemId.toLowerCase().includes(searchTerm)) ||
+                    (count.itemName && count.itemName.toLowerCase().includes(searchTerm))
+                );
+            }
+
+            displayRecentCounts(filtered);
+            updateStats(filtered);
+        }
+
+        // Update statistics
+        function updateStats(counts) {
+            if (!counts || counts.length === 0) {
+                document.getElementById('todayCount').textContent = '0';
+                document.getElementById('varianceRate').textContent = '0%';
+                document.getElementById('accuracyRate').textContent = '100%';
+                return;
+            }
+
+            // Today's counts
+            const today = new Date();
+            const todayCounts = counts.filter(count => {
+                const countDate = new Date(count.timestamp);
+                return countDate.toDateString() === today.toDateString();
+            });
+            document.getElementById('todayCount').textContent = todayCounts.length;
+
+            // Variance rate (percentage of counts with variance)
+            const varianceCount = counts.filter(count => count.variance !== 0).length;
+            const varianceRate = Math.round((varianceCount / counts.length) * 100);
+            document.getElementById('varianceRate').textContent = varianceRate + '%';
+
+            // Accuracy rate (percentage of counts without variance)
+            const accuracyRate = 100 - varianceRate;
+            document.getElementById('accuracyRate').textContent = accuracyRate + '%';
+        }
+
+        // Show message
+        function showMessage(message, type = 'info') {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = message;
+            messageEl.className = `message ${type}`;
+            messageEl.classList.remove('hidden');
+
+            if (type !== 'error') {
+                setTimeout(() => {
+                    messageEl.classList.add('hidden');
+                }, 5000);
+            }
+        }
+
+        // Show success message
+        function showSuccess(message) {
+            showMessage(message, 'success');
+        }
+
+        // Show error message
+        function showError(message) {
+            showMessage(message, 'error');
+        }
+
+        // Load sample data for demonstration
+        function loadSampleData() {
+            loadSampleInventoryData();
+            loadSampleCounts();
+            showSuccess('Sample data loaded for demonstration');
+        }
+
+        // Clear all data
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all data from local storage? This cannot be undone.')) {
+                localStorage.removeItem('recentCounts');
+                localStorage.removeItem('inventoryData');
+                state.recentCounts = [];
+                state.inventoryData = [];
+                displayRecentCounts([]);
+                updateStats([]);
+                populateItemDatalist([]);
+                populateInventoryTable([]);
+                showSuccess('All local data has been cleared. Reloading sample inventory.');
+                loadSampleInventoryData();
+            }
+        }
+
+        // Filter the main inventory data table
+        function filterInventoryTable() {
+            const searchTerm = document.getElementById('inventorySearch').value.toLowerCase();
+            if (!searchTerm) {
+                populateInventoryTable(state.inventoryData);
+                return;
+            }
+
+            const filteredData = state.inventoryData.filter(item => {
+                const idMatch = item.id.toLowerCase().includes(searchTerm);
+                const nameMatch = item.name.toLowerCase().includes(searchTerm);
+                return idMatch || nameMatch;
+            });
+
+            populateInventoryTable(filteredData);
+        }
+    </script>
+</body>
 </html>
