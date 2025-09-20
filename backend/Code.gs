@@ -278,6 +278,111 @@ function syncInventory() {
   }
 }
 
+// ==================== DAILY COUNT AGGREGATION ====================
+
+/**
+ * Calculates the sum of physical counts for each item for the current day
+ * and updates the main inventory sheet.
+ */
+function updateDailyPhysicalCounts() {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const countsSheet = ss.getSheetByName(CONFIG.SHEETS.COUNTS);
+    const mainSheet = ss.getSheetByName(CONFIG.SHEETS.APP_SHEET);
+
+    if (!countsSheet || !mainSheet) {
+      throw new Error("Required sheets ('PhysicalCounts' or main app sheet) not found.");
+    }
+
+    // 1. Get all data from the counts sheet
+    const countsData = countsSheet.getDataRange().getValues();
+    if (countsData.length < 2) {
+      console.log("No count data to process.");
+      return; // No data to process
+    }
+    const countsHeader = countsData.shift();
+    const countItemIdIndex = countsHeader.indexOf('ItemID');
+    const countQtyIndex = countsHeader.indexOf('PhysicalQty');
+    const countTimestampIndex = countsHeader.indexOf('Timestamp');
+
+    // 2. Filter for today's counts and sum them up
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+
+    const dailyTotals = {}; // { itemId: totalQty, ... }
+
+    for (const row of countsData) {
+      const timestamp = new Date(row[countTimestampIndex]);
+      if (timestamp >= today) {
+        const itemId = row[countItemIdIndex];
+        const qty = Number(row[countQtyIndex]);
+        if (itemId && !isNaN(qty)) {
+          dailyTotals[itemId] = (dailyTotals[itemId] || 0) + qty;
+        }
+      }
+    }
+    console.log("Today's totals:", JSON.stringify(dailyTotals));
+
+    // 3. Update the main inventory sheet
+    const mainData = mainSheet.getDataRange().getValues();
+    const mainHeader = mainData[0];
+    const mainItemIdIndex = mainHeader.indexOf('ItemID');
+    const mainPhysicalQtyIndex = 11; // Column L
+
+    if (mainItemIdIndex === -1) {
+      throw new Error("'ItemID' column not found in the main inventory sheet.");
+    }
+
+    const updatedValues = [];
+
+    // Start from row 2 (index 1) to skip the header
+    for (let i = 1; i < mainData.length; i++) {
+      const row = mainData[i];
+      const currentItemId = row[mainItemIdIndex];
+      const dailySum = dailyTotals[currentItemId] || 0;
+      row[mainPhysicalQtyIndex] = dailySum;
+      updatedValues.push([dailySum]);
+    }
+
+    // 4. Write the updated values back to the sheet
+    if (updatedValues.length > 0) {
+      mainSheet.getRange(2, mainPhysicalQtyIndex + 1, updatedValues.length, 1).setValues(updatedValues);
+      console.log(`Successfully updated ${updatedValues.length} rows in the main inventory sheet.`);
+    } else {
+      console.log("No rows to update in the main inventory sheet.");
+    }
+
+  } catch (error) {
+    console.error("Error in updateDailyPhysicalCounts:", error.message);
+  }
+}
+
+/**
+ * Creates a time-driven trigger to run the daily count update function.
+ * Deletes any existing triggers for the same function to prevent duplicates.
+ */
+function createDailyTrigger() {
+  const functionName = 'updateDailyPhysicalCounts';
+
+  // Delete any existing triggers for this function
+  const triggers = ScriptApp.getProjectTriggers();
+  for (const trigger of triggers) {
+    if (trigger.getHandlerFunction() === functionName) {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  }
+
+  // Create a new trigger to run every day between 1am and 2am
+  ScriptApp.newTrigger(functionName)
+    .timeBased()
+    .everyDays(1)
+    .atHour(1)
+    .create();
+
+  console.log("Daily trigger created successfully.");
+}
+
+
 // MENU FUNCTIONS
 function onOpen() {
   try {
@@ -287,6 +392,8 @@ function onOpen() {
       .addSeparator()
       .addItem('Sync Inventory', 'menuSyncInventory')
       .addItem('Initialize System', 'menuInitializeSheets')
+      .addSeparator()
+      .addItem('Enable Daily Auto-Update', 'createDailyTrigger')
       .addToUi();
   } catch (error) {
     console.error("Error creating menu:", error);

@@ -1151,8 +1151,6 @@
             if (state.isLoading) return;
             state.isLoading = true;
 
-            console.log("Frontend: Starting to load recent counts...");
-
             // Show loading state in UI
             document.getElementById('recentCounts').innerHTML = `
                 <div class="empty-state">
@@ -1167,7 +1165,6 @@
 
             google.script.run
                 .withSuccessHandler(function(response) {
-                    console.log("Frontend: Received response from getRecentSubmissions:", response);
                     state.isLoading = false;
                     refreshBtn.innerHTML = originalHtml;
                     refreshBtn.disabled = false;
@@ -1175,27 +1172,22 @@
                     try {
                         if (response && response.success) {
                             if (response.counts && response.counts.length > 0) {
-                                console.log(`Frontend: Success! Found ${response.counts.length} counts.`);
                                 state.recentCounts = response.counts;
                                 displayRecentCounts(state.recentCounts);
                                 updateStats(state.recentCounts);
                             } else {
-                                console.log("Frontend: Success, but no counts were returned.");
                                 document.getElementById('recentCounts').innerHTML =
                                     '<div class="empty-state"><i class="fas fa-inbox"></i><p>No counts submitted yet</p></div>';
                                 updateStats([]);
                             }
                         } else {
-                            console.error("Frontend: The backend call was not successful.", response ? response.error : 'No response object');
                             showError('Failed to load counts: ' + (response ? response.error : 'Unknown error'));
                         }
                     } catch (e) {
-                        console.error("Frontend: Error processing success response:", e);
                         showError('An error occurred while displaying the counts.');
                     }
                 })
                 .withFailureHandler(function(error) {
-                    console.error("Frontend: The backend call failed entirely.", error);
                     state.isLoading = false;
                     refreshBtn.innerHTML = originalHtml;
                     refreshBtn.disabled = false;
