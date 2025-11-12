@@ -1,0 +1,87 @@
+
+{
+  "overall": {
+    "totalSales": 150000000,
+    "soCount": 120,
+    "qtySold": 500,
+    "ats": 1250000,
+    "basketSize": 4.17,
+    "asp": 300000,
+    "salesTarget": 200000000,
+    "achievement": 75
+  },
+  "byCategory1": {
+    "FURNITURE": { "totalSales": 100000000, "soCount": 80, "qtySold": 300, "ats": 1250000, "basketSize": 3.75 },
+    "ACCESSORIES": { "totalSales": 50000000, "soCount": 40, "qtySold": 200, "ats": 1250000, "basketSize": 5 }
+  },
+  "byCategory2": {
+    "SOFA": { "totalSales": 50000000, "soCount": 30, "qtySold": 100 },
+    "BED": { "totalSales": 30000000, "soCount": 20, "qtySold": 80 }
+  },
+  "bySubCategory": {
+    "SOFA 2 SEATER": { "totalSales": 20000000, "soCount": 15, "qtySold": 40 },
+    "BED FRAME": { "totalSales": 15000000, "soCount": 10, "qtySold": 30 }
+  },
+  "salesmanPerformance": {
+    "John Doe": { "totalSales": 80000000, "soCount": 60, "qtySold": 250, "ats": 1333333, "basketSize": 4.16, "asp": 320000 },
+    "Jane Smith": { "totalSales": 70000000, "soCount": 60, "qtySold": 250, "ats": 1166666, "basketSize": 4.16, "asp": 280000 }
+  },
+  "salesmanPerformanceDetails": {
+    "John Doe": {
+      "byCategory": {
+        "FURNITURE": { "totalSales": 60000000, "soCount": 40, "qtySold": 150, "ats": 1500000, "basketSize": 3.75 },
+        "ACCESSORIES": { "totalSales": 20000000, "soCount": 20, "qtySold": 100, "ats": 1000000, "basketSize": 5 }
+      },
+      "byCustomerType": {
+        "RETAIL": { "totalSales": 50000000, "soCount": 30, "qtySold": 120, "ats": 1666666, "basketSize": 4 },
+        "PROJECT": { "totalSales": 30000000, "soCount": 30, "qtySold": 130, "ats": 1000000, "basketSize": 4.33 }
+      }
+    },
+    "Jane Smith": {
+        "byCategory": {
+          "FURNITURE": { "totalSales": 40000000, "soCount": 40, "qtySold": 150, "ats": 1000000, "basketSize": 3.75 },
+          "ACCESSORIES": { "totalSales": 30000000, "soCount": 20, "qtySold": 100, "ats": 1500000, "basketSize": 5 }
+        },
+        "byCustomerType": {
+          "RETAIL": { "totalSales": 40000000, "soCount": 30, "qtySold": 120, "ats": 1333333, "basketSize": 4 },
+          "PROJECT": { "totalSales": 30000000, "soCount": 30, "qtySold": 130, "ats": 1000000, "basketSize": 4.33 }
+        }
+      }
+  },
+  "bestSellersFurniture": [
+    { "product": "Modern Sofa", "totalSales": 15000000, "qtySold": 30 },
+    { "product": "King Size Bed", "totalSales": 12000000, "qtySold": 20 }
+  ],
+  "bestSellersAccessories": [
+    { "product": "Decorative Pillow", "totalSales": 5000000, "qtySold": 100 },
+    { "product": "Floor Lamp", "totalSales": 4000000, "qtySold": 50 }
+  ],
+  "byCustomerType": {
+    "RETAIL": { "totalSales": 90000000, "soCount": 60, "qtySold": 240, "ats": 1500000, "basketSize": 4 },
+    "PROJECT": { "totalSales": 60000000, "soCount": 60, "qtySold": 260, "ats": 1000000, "basketSize": 4.33 }
+  },
+  "byPromotion": {
+    "Discount 10%": { "totalSales": 40000000, "soCount": 30, "qtySold": 100, "ats": 1333333, "basketSize": 3.33 },
+    "No Promotion": { "totalSales": 110000000, "soCount": 90, "qtySold": 400, "ats": 1222222, "basketSize": 4.44 }
+  },
+  "trends": {
+    "dailySales": [
+      ["Mon Nov 03 2025", 18000000],
+      ["Tue Nov 04 2025", 22000000],
+      ["Wed Nov 05 2025", 20000000],
+      ["Thu Nov 06 2025", 25000000],
+      ["Fri Nov 07 2025", 28000000],
+      ["Sat Nov 08 2025", 32000000],
+      ["Sun Nov 09 2025", 5000000]
+    ],
+    "dailyTargets": [
+        ["Mon Nov 03 2025", 20000000],
+        ["Tue Nov 04 2025", 21000000],
+        ["Wed Nov 05 2025", 22000000],
+        ["Thu Nov 06 2025", 23000000],
+        ["Fri Nov 07 2025", 24000000],
+        ["Sat Nov 08 2025", 25000000],
+        ["Sun Nov 09 2025", 65000000]
+    ]
+  }
+}
