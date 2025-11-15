@@ -1,20 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Mock data for development
-const mockInventory = [
-  { id: 1, name: 'Laptop', category: 'Electronics', quantity: 15 },
-  { id: 2, name: 'Keyboard', category: 'Electronics', quantity: 50 },
-  { id: 3, name: 'Mouse', category: 'Electronics', quantity: 75 },
-  { id: 4, name: 'Chair', category: 'Furniture', quantity: 20 },
-];
-
-const mockCategories = [
-  { id: 1, name: 'Electronics' },
-  { id: 2, name: 'Furniture' },
-  { id: 3, name: 'Office Supplies' },
-];
-
+const API_URL = 'http://localhost:3001/api';
 
 function App() {
   const [inventory, setInventory] = useState([]);
@@ -22,32 +9,65 @@ function App() {
   const [activeView, setActiveView] = useState('dashboard'); // dashboard, physical_count, categories
 
   useEffect(() => {
-    // In a real app, you'd fetch this data from an API.
-    // For now, we'll use mock data.
-    setInventory(mockInventory);
-    setCategories(mockCategories);
+    const fetchData = async () => {
+      try {
+        const [inventoryRes, categoriesRes] = await Promise.all([
+          fetch(`${API_URL}/inventory`),
+          fetch(`${API_URL}/categories`),
+        ]);
+        const inventoryData = await inventoryRes.json();
+        const categoriesData = await categoriesRes.json();
+        setInventory(inventoryData);
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      }
+    };
+    fetchData();
   }, []);
 
-  const handleCategorySubmit = (newCategoryName) => {
-    const newCategory = {
-      id: Date.now(),
-      name: newCategoryName,
-    };
-    setCategories([...categories, newCategory]);
+  const handleCategorySubmit = async (newCategoryName) => {
+    try {
+      const response = await fetch(`${API_URL}/categories`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategoryName }),
+      });
+      const newCategory = await response.json();
+      setCategories([...categories, newCategory]);
+    } catch (error) {
+      console.error("Error adding category:", error);
+    }
   };
 
-  const handleInventorySubmit = (newItem) => {
-    const newInventoryItem = {
-      id: Date.now(),
-      ...newItem,
-    };
-    setInventory([...inventory, newInventoryItem]);
+  const handleInventorySubmit = async (newItem) => {
+    try {
+      const response = await fetch(`${API_URL}/inventory`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newItem),
+      });
+      const newInventoryItem = await response.json();
+      setInventory([...inventory, newInventoryItem]);
+    } catch (error) {
+      console.error("Error adding inventory item:", error);
+    }
   };
 
-  const handleQuantityUpdate = (itemId, newQuantity) => {
-    setInventory(inventory.map(item =>
-      item.id === itemId ? { ...item, quantity: newQuantity } : item
-    ));
+  const handleQuantityUpdate = async (itemId, newQuantity) => {
+    try {
+      const response = await fetch(`${API_URL}/inventory/${itemId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quantity: newQuantity }),
+      });
+      const updatedItem = await response.json();
+      setInventory(inventory.map(item =>
+        item.id === itemId ? updatedItem : item
+      ));
+    } catch (error) {
+      console.error("Error updating quantity:", error);
+    }
   };
 
 
