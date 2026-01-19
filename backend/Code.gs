@@ -148,62 +148,57 @@ function setupSheets() {
   }
 }
 
+// Centralized function to get headers for each sheet
+function getSheetHeaders(sheetName) {
+  switch(sheetName) {
+    case 'Leads':
+      return ['LeadID', 'Name', 'Phone', 'Email', 'Source', 'Showroom', 'Product', 'CreatedAt', 'Status', 'NextFollowUp', 'FollowUpCount', 'Notes', 'AssignedTo', 'LastContact', 'DealValue', 'ReceiptNumber'];
+    case 'FollowUpHistory':
+      return ['LeadID', 'Date', 'Type', 'Status', 'Notes', 'User'];
+    case 'Transaction':
+      return ['LeadID', 'TransactionDate', 'Product', 'Amount', 'PaymentStatus', 'DeliveryStatus', 'Notes'];
+    case 'Settings':
+      return ['Key', 'Value', 'Description', 'Example'];
+    case 'MessageTemplates':
+      return ['TemplateName', 'Message', 'Type', 'Step'];
+    case 'MonthlyLeadSummary':
+      return ['Date', 'LeadID', 'AssignedTo', 'Name', 'Source', 'Phone', 'Note', 'Status', 'DealValue', 'LastContact'];
+    case 'DailyDashboardStats':
+      return [
+        'Date',
+        'LeadsCreated_Count', 'LeadsCreated_Value',
+        'BecameInProgress_Count', 'BecameInProgress_Value',
+        'BecameProspecting_Count', 'BecameProspecting_Value',
+        'BecameConvincing_Count', 'BecameConvincing_Value',
+        'BecameNegotiation_Count', 'BecameNegotiation_Value',
+        'BecameWon_Count', 'BecameWon_Value',
+        'BecameLost_Count', 'BecameLost_Value',
+        'BecameDrop_Count', 'BecameDrop_Value',
+        'LeadsContacted_Count'
+      ];
+    case 'TeamPerformanceDashboard':
+      return [
+        'Month', 'TeamMember',
+        'NewLeads_Count', 'NewLeads_Value',
+        'InProgress_Count', 'InProgress_Value',
+        'Prospecting_Count', 'Prospecting_Value',
+        'Convincing_Count', 'Convincing_Value',
+        'Negotiation_Count', 'Negotiation_Value',
+        'Won_Count', 'Won_Value',
+        'Lost_Count', 'Lost_Value',
+        'Drop_Count', 'Drop_Value'
+      ];
+    default:
+      return [];
+  }
+}
+
 // Set up headers for each sheet type
 function setupSheetHeaders(sheetName, sheet) {
   try {
     // Clear existing data if needed (only if empty)
     if (sheet.getLastRow() === 0) {
-      let headers = [];
-
-      switch(sheetName) {
-        case 'Leads':
-          headers = ['LeadID', 'Name', 'Phone', 'Email', 'Source', 'Showroom', 'Product', 'CreatedAt', 'Status', 'NextFollowUp', 'FollowUpCount', 'Notes', 'AssignedTo', 'LastContact', 'DealValue', 'ReceiptNumber'];
-          break;
-        case 'FollowUpHistory':
-          headers = ['LeadID', 'Date', 'Type', 'Status', 'Notes', 'User'];
-          break;
-        case 'Transaction':
-          headers = ['LeadID', 'TransactionDate', 'Product', 'Amount', 'PaymentStatus', 'DeliveryStatus', 'Notes'];
-          break;
-        case 'Settings':
-          headers = ['Key', 'Value', 'Description', 'Example'];
-          break;
-        case 'MessageTemplates':
-          headers = ['TemplateName', 'Message', 'Type', 'Step'];
-          break;
-        case 'MonthlyLeadSummary':
-          headers = ['Date', 'LeadID', 'AssignedTo', 'Name', 'Source', 'Phone', 'Note', 'Status', 'DealValue', 'LastContact'];
-          break;
-        case 'DailyDashboardStats':
-            headers = [
-              'Date',
-              'LeadsCreated_Count', 'LeadsCreated_Value',
-              'BecameInProgress_Count', 'BecameInProgress_Value',
-              'BecameProspecting_Count', 'BecameProspecting_Value',
-              'BecameConvincing_Count', 'BecameConvincing_Value',
-              'BecameNegotiation_Count', 'BecameNegotiation_Value',
-              'BecameWon_Count', 'BecameWon_Value',
-              'BecameLost_Count', 'BecameLost_Value',
-              'BecameDrop_Count', 'BecameDrop_Value',
-              'LeadsContacted_Count'
-            ];
-            break;
-        case 'TeamPerformanceDashboard':
-            headers = [
-              'Month', 'TeamMember',
-              'NewLeads_Count', 'NewLeads_Value',
-              'InProgress_Count', 'InProgress_Value',
-              'Prospecting_Count', 'Prospecting_Value',
-              'Convincing_Count', 'Convincing_Value',
-              'Negotiation_Count', 'Negotiation_Value',
-              'Won_Count', 'Won_Value',
-              'Lost_Count', 'Lost_Value',
-              'Drop_Count', 'Drop_Value'
-            ];
-            break;
-        default:
-          return; // No headers for unknown sheets
-      }
+      const headers = getSheetHeaders(sheetName);
 
       if (headers.length > 0) {
         sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
@@ -213,6 +208,51 @@ function setupSheetHeaders(sheetName, sheet) {
     }
   } catch (e) {
     Logger.log(`Error setting up headers for ${sheetName}: ${e.toString()}`);
+  }
+}
+
+/**
+ * Utility function to force update headers in all sheets.
+ * WARNING: This overwrites the first row of every configured sheet.
+ * Use this to ensure all sheets have the latest schema.
+ */
+function forceUpdateHeaders() {
+  const ui = SpreadsheetApp.getUi();
+  const response = ui.alert(
+    'Confirm Header Update',
+    'Are you sure you want to overwrite the headers (Row 1) of ALL sheets with the latest configuration? This ensures compatibility but will replace any manual header changes.',
+    ui.ButtonSet.YES_NO
+  );
+
+  if (response == ui.Button.YES) {
+    try {
+      const ss = SpreadsheetApp.openById(CONFIG.sheetId);
+      let updatedCount = 0;
+
+      Object.keys(CONFIG.sheets).forEach(sheetKey => {
+        const sheetName = CONFIG.sheets[sheetKey];
+        const headers = getSheetHeaders(sheetName);
+
+        if (headers.length > 0) {
+          let sheet = ss.getSheetByName(sheetName);
+          if (!sheet) {
+            sheet = ss.insertSheet(sheetName);
+            Logger.log(`Created sheet: ${sheetName}`);
+          }
+
+          sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+          sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+          updatedCount++;
+          Logger.log(`Updated headers for: ${sheetName}`);
+        }
+      });
+
+      ui.alert(`Success`, `Updated headers for ${updatedCount} sheets.`, ui.ButtonSet.OK);
+
+    } catch (e) {
+      Logger.log(`Error in forceUpdateHeaders: ${e.toString()}`);
+      ui.alert(`Error: ${e.message}`);
+    }
   }
 }
 // Set up default data
@@ -1679,6 +1719,8 @@ function onOpen() {
       .addItem('Update Team Dashboard', 'updateTeamPerformanceDashboard')
       .addSeparator()
       .addItem('Sync All Lead Notes', 'syncAllLeadNotes')
+      .addSeparator()
+      .addItem('Update All Sheet Headers', 'forceUpdateHeaders')
       .addToUi();
 }
 
