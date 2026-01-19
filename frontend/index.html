@@ -617,12 +617,11 @@
             leadsToDisplay.forEach(lead => {
                 const leadId = lead.LeadID || 'unknown';
                 const leadName = lead.Name || 'No Name';
-                const leadPhone = lead.Phone || 'No phone';
-                const leadEmail = lead.Email || 'No email';
                 const leadProduct = lead.Product || 'No product';
                 const leadShowroom = lead.Showroom || '-';
                 const leadStatus = lead.Status || 'New';
                 const leadAssigned = lead.AssignedTo || 'Team';
+                const leadNotes = lead.Notes || '-';
                 const followUpCount = lead.FollowUpCount || 0;
                 const dealValue = lead.DealValue || 0;
                 const receiptNumber = lead.ReceiptNumber || '';
@@ -658,11 +657,10 @@
                                     </div>
                                 </div>
                                 <p class="card-text small text-muted">
-                                    <i class="fas fa-phone"></i> ${leadPhone}<br>
-                                    <i class="fas fa-envelope"></i> ${leadEmail}<br>
                                     <i class="fas fa-cube"></i> ${leadProduct}<br>
                                     <i class="fas fa-store"></i> ${leadShowroom}<br>
                                     <i class="fas fa-user"></i> Assigned: ${leadAssigned}<br>
+                                    <i class="fas fa-sticky-note"></i> Note: ${leadNotes}<br>
                                     <i class="fas fa-calendar"></i> Next: ${nextFollowUp ? nextFollowUp.toLocaleDateString() : 'Not set'}<br>
                                     <i class="fas fa-sync"></i> Follow-ups: ${followUpCount}
                                     ${dealValue > 0 ? `<br><i class="fas fa-dollar-sign"></i> Deal Value: <span class="deal-value">Rp ${formatNumber(dealValue)}</span>` : ''}
