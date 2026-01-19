@@ -1,5 +1,5 @@
 const CONFIG = {
-  sheetId: '1Wvn_BAvlYHsEiYN5D_0D1BrDwa1239vjuBk8LFJ_dKA', // Your actual spreadsheet ID
+  sheetId: '1RG1rfZ-eKAkUOCmvOrlUoq45tfXGGZFNm2VvDgJAad4', // Updated spreadsheet ID
   sheets: {
     leads: 'Leads',
     followups: 'FollowUpHistory',
@@ -13,17 +13,22 @@ const CONFIG = {
 };
 
 function getTeamMembers() {
-  return ['AJI', 'HERU', 'FAHMY', 'HILLARY', 'DWI PUJI', 'RAHMAT', 'RIZKY', 'MELLINDA', 'CISCO'];
+  return ['HERU', 'FAHMY', 'HILLARY', 'DWI PUJI', 'RIZKY M.', 'MELLINDA', 'NANA', 'SYAFEI', 'RIZKI PIK', 'DESI', 'DIMAS', 'DANU', 'CISCO', 'DESTIAN'];
 }
 
 // New function to get status options
 function getStatusOptions() {
-  return ['New', 'In Progress', 'Prospecting', 'Convincing', 'Negotiating', 'Converted', 'Lost'];
+  return ['New', 'In Progress', 'Prospecting', 'Convincing', 'Negotiation', 'Won', 'Lost', 'Drop'];
 }
 
 // New function to get source options
 function getSourceOptions() {
   return ['Website', 'Social Media', 'Referral', 'Advertisement', 'Walk In', 'Other'];
+}
+
+// New function to get showroom options
+function getShowroomOptions() {
+  return ['South78', 'PIM', 'SCT', 'PIK 2'];
 }
 
 // Enhanced getSheet function that works with your spreadsheet
@@ -99,9 +104,9 @@ function addSampleData() {
   try {
     console.log('Adding sample data...');
     const sampleLeads = [
-      ['L001', 'John Doe', '+1234567890', 'john@test.com', 'Website', 'Product A', new Date(), 'New', new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), 0, 'Interested in pricing', 'Team', new Date()],
-      ['L002', 'Jane Smith', '+1234567891', 'jane@test.com', 'Social Media', 'Product B', new Date(), 'In Progress', new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), 1, 'Follow up tomorrow', 'Team', new Date()],
-      ['L003', 'Mike Johnson', '+1234567892', 'mike@test.com', 'Referral', 'Product C', new Date(), 'New', new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 0, 'Hot lead', 'Team', new Date()]
+      ['L001', 'John Doe', '+1234567890', 'john@test.com', 'Website', 'South78', 'Product A', new Date(), 'New', new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), 0, 'Interested in pricing', 'Team', new Date()],
+      ['L002', 'Jane Smith', '+1234567891', 'jane@test.com', 'Social Media', 'PIM', 'Product B', new Date(), 'In Progress', new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), 1, 'Follow up tomorrow', 'Team', new Date()],
+      ['L003', 'Mike Johnson', '+1234567892', 'mike@test.com', 'Referral', 'SCT', 'Product C', new Date(), 'New', new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), 0, 'Hot lead', 'Team', new Date()]
     ];
 
     const sheet = getSheet('leads');
@@ -152,7 +157,7 @@ function setupSheetHeaders(sheetName, sheet) {
 
       switch(sheetName) {
         case 'Leads':
-          headers = ['LeadID', 'Name', 'Phone', 'Email', 'Source', 'Product', 'CreatedAt', 'Status', 'NextFollowUp', 'FollowUpCount', 'Notes', 'AssignedTo', 'LastContact', 'DealValue', 'ReceiptNumber'];
+          headers = ['LeadID', 'Name', 'Phone', 'Email', 'Source', 'Showroom', 'Product', 'CreatedAt', 'Status', 'NextFollowUp', 'FollowUpCount', 'Notes', 'AssignedTo', 'LastContact', 'DealValue', 'ReceiptNumber'];
           break;
         case 'FollowUpHistory':
           headers = ['LeadID', 'Date', 'Type', 'Status', 'Notes', 'User'];
@@ -176,9 +181,10 @@ function setupSheetHeaders(sheetName, sheet) {
               'BecameInProgress_Count', 'BecameInProgress_Value',
               'BecameProspecting_Count', 'BecameProspecting_Value',
               'BecameConvincing_Count', 'BecameConvincing_Value',
-              'BecameNegotiating_Count', 'BecameNegotiating_Value',
-              'BecameConverted_Count', 'BecameConverted_Value',
+              'BecameNegotiation_Count', 'BecameNegotiation_Value',
+              'BecameWon_Count', 'BecameWon_Value',
               'BecameLost_Count', 'BecameLost_Value',
+              'BecameDrop_Count', 'BecameDrop_Value',
               'LeadsContacted_Count'
             ];
             break;
@@ -189,9 +195,10 @@ function setupSheetHeaders(sheetName, sheet) {
               'InProgress_Count', 'InProgress_Value',
               'Prospecting_Count', 'Prospecting_Value',
               'Convincing_Count', 'Convincing_Value',
-              'Negotiating_Count', 'Negotiating_Value',
-              'Converted_Count', 'Converted_Value',
-              'Lost_Count', 'Lost_Value'
+              'Negotiation_Count', 'Negotiation_Value',
+              'Won_Count', 'Won_Value',
+              'Lost_Count', 'Lost_Value',
+              'Drop_Count', 'Drop_Value'
             ];
             break;
         default:
@@ -275,7 +282,7 @@ function getActiveLeads() {
       // Filter Logic:
       // 1. If lead was contacted/created this month (MTD), always show it.
       // 2. If lead is NOT MTD:
-      //    - If Status is 'Converted' or 'Lost', HIDE it (Historical closed leads).
+      //    - If Status is 'Won', 'Lost', or 'Drop', HIDE it (Historical closed leads).
       //    - If Status is Active (New, In Progress, etc.), SHOW it (Active pipeline/Overdue).
 
       let activityDate;
@@ -288,7 +295,7 @@ function getActiveLeads() {
       }
 
       const isMTD = activityDate.getMonth() === currentMonth && activityDate.getFullYear() === currentYear;
-      const isClosed = ['Converted', 'Lost'].includes(lead.Status);
+      const isClosed = ['Won', 'Lost', 'Drop'].includes(lead.Status);
 
       if (isMTD) return true;
       if (!isClosed) return true; // Keep active pipeline regardless of date
@@ -317,10 +324,6 @@ function getLeads() {
     if (!data || data.length === 0) {
       return [];
     }
-
-    const today = new Date();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
 
     const leads = data.map(row => {
       const lead = {};
@@ -354,6 +357,7 @@ function getSampleLeadsForTesting() {
       Phone: '+1234567890',
       Email: 'john@test.com',
       Source: 'Website',
+      Showroom: 'South78',
       Product: 'Product A',
       CreatedAt: new Date().toISOString(),
       Status: 'New',
@@ -379,17 +383,19 @@ function getDashboardStats() {
       inProgress: 0,
       prospecting: 0,
       convincing: 0,
-      negotiating: 0,
-      converted: 0,
+      negotiation: 0,
+      won: 0,
       lost: 0,
+      drop: 0,
       dueToday: 0,
       overdue: 0,
       monthlyStats: {
         prospectingValue: 0,
         convincingValue: 0,
-        negotiatingValue: 0,
-        convertedValue: 0,
+        negotiationValue: 0,
+        wonValue: 0,
         lostValue: 0,
+        dropValue: 0,
         totalValue: 0
       }
     };
@@ -420,41 +426,44 @@ function getDashboardStats() {
       const isMTDActivity = activityDate.getMonth() === currentMonth && activityDate.getFullYear() === currentYear;
 
       // 2. Active Pipeline (Snapshot): Count All Active Leads regardless of date
-      if (['New', 'In Progress', 'Prospecting', 'Convincing', 'Negotiating'].includes(status)) {
+      if (['New', 'In Progress', 'Prospecting', 'Convincing', 'Negotiation'].includes(status)) {
           if (status === 'New') stats.new++;
           else if (status === 'In Progress') stats.inProgress++;
           else if (status === 'Prospecting') stats.prospecting++;
           else if (status === 'Convincing') stats.convincing++;
-          else if (status === 'Negotiating') stats.negotiating++;
+          else if (status === 'Negotiation') stats.negotiation++;
 
           // Accumulate Value for Active Pipeline (Snapshot)
           if (status === 'Prospecting') {
             stats.monthlyStats.prospectingValue += dealValue;
           } else if (status === 'Convincing') {
             stats.monthlyStats.convincingValue += dealValue;
-          } else if (status === 'Negotiating') {
-            stats.monthlyStats.negotiatingValue += dealValue;
+          } else if (status === 'Negotiation') {
+            stats.monthlyStats.negotiationValue += dealValue;
           }
 
           // Total Active Pipeline Value
-          if (['Prospecting', 'Convincing', 'Negotiating'].includes(status)) {
+          if (['Prospecting', 'Convincing', 'Negotiation'].includes(status)) {
             stats.monthlyStats.totalValue += dealValue;
           }
       }
 
       // 3. Closed Leads (Performance): Count Only MTD Activity
       if (isMTDActivity) {
-          if (status === 'Converted') {
-              stats.converted++;
-              stats.monthlyStats.convertedValue += dealValue;
+          if (status === 'Won') {
+              stats.won++;
+              stats.monthlyStats.wonValue += dealValue;
           } else if (status === 'Lost') {
               stats.lost++;
               stats.monthlyStats.lostValue += dealValue;
+          } else if (status === 'Drop') {
+              stats.drop++;
+              stats.monthlyStats.dropValue += dealValue;
           }
       }
 
       // Check follow-up dates (Global check - unrelated to monthly stats)
-      if (status !== 'Converted' && status !== 'Lost' && lead.NextFollowUp) {
+      if (status !== 'Won' && status !== 'Lost' && status !== 'Drop' && lead.NextFollowUp) {
         try {
           const followUpDate = new Date(lead.NextFollowUp);
           followUpDate.setHours(0, 0, 0, 0);
@@ -474,8 +483,8 @@ function getDashboardStats() {
     Logger.log(`Total leads: ${stats.total}`);
     Logger.log(`Prospecting: ${stats.prospecting} with value: ${stats.monthlyStats.prospectingValue}`);
     Logger.log(`Convincing: ${stats.convincing} with value: ${stats.monthlyStats.convincingValue}`);
-    Logger.log(`Negotiating: ${stats.negotiating} with value: ${stats.monthlyStats.negotiatingValue}`);
-    Logger.log(`Converted: ${stats.converted} with value: ${stats.monthlyStats.convertedValue}`);
+    Logger.log(`Negotiation: ${stats.negotiation} with value: ${stats.monthlyStats.negotiationValue}`);
+    Logger.log(`Won: ${stats.won} with value: ${stats.monthlyStats.wonValue}`);
     Logger.log(`Total Monthly Value: ${stats.monthlyStats.totalValue}`);
 
     return stats;
@@ -484,12 +493,14 @@ function getDashboardStats() {
     Logger.log('Error in getDashboardStats: ' + e.toString());
     return {
       total: 0, new: 0, inProgress: 0, prospecting: 0, convincing: 0,
-      negotiating: 0, converted: 0, lost: 0, dueToday: 0, overdue: 0,
+      negotiation: 0, won: 0, lost: 0, drop: 0, dueToday: 0, overdue: 0,
       monthlyStats: {
         prospectingValue: 0,
         convincingValue: 0,
-        negotiatingValue: 0,
-        convertedValue: 0,
+        negotiationValue: 0,
+        wonValue: 0,
+        lostValue: 0,
+        dropValue: 0,
         totalValue: 0
       }
     };
@@ -512,6 +523,7 @@ function addLead(leadData) {
       leadData.phone,
       leadData.email || '',
       leadData.source || 'Website',
+      leadData.showroom || '', // Added Showroom
       leadData.product || '',
       now,
       'New',
@@ -705,7 +717,8 @@ function updateStatus(leadId, newStatus, dealValue = '', receiptNumber = '', los
         sheet.getRange(i + 1, lastContactColIndex + 1).setValue(new Date());
 
         // Update NextFollowUp for active statuses to clear "Overdue"
-        if (newStatus !== 'Converted' && newStatus !== 'Lost' && nextFollowUpColIndex !== -1) {
+        // Also clear if status is Won, Lost or Drop
+        if (newStatus !== 'Won' && newStatus !== 'Lost' && newStatus !== 'Drop' && nextFollowUpColIndex !== -1) {
           const currentFollowUpCount = parseInt(data[i][followUpCountColIndex]) || 0;
           const nextDate = calculateNextFollowUp(new Date(), currentFollowUpCount);
           sheet.getRange(i + 1, nextFollowUpColIndex + 1).setValue(nextDate);
@@ -716,13 +729,13 @@ function updateStatus(leadId, newStatus, dealValue = '', receiptNumber = '', los
           sheet.getRange(i + 1, dealValueColIndex + 1).setValue(dealValue);
         }
 
-        // Update receipt number if provided and status is Converted
-        if (receiptNumber && receiptNumberColIndex !== -1 && newStatus === 'Converted') {
+        // Update receipt number if provided and status is Won
+        if (receiptNumber && receiptNumberColIndex !== -1 && newStatus === 'Won') {
           sheet.getRange(i + 1, receiptNumberColIndex + 1).setValue(receiptNumber);
         }
 
-        // If converted or lost, clear next follow-up (check if column exists)
-        if ((newStatus === 'Converted' || newStatus === 'Lost') && nextFollowUpColIndex !== -1) {
+        // If Won, Lost or Drop, clear next follow-up (check if column exists)
+        if ((newStatus === 'Won' || newStatus === 'Lost' || newStatus === 'Drop') && nextFollowUpColIndex !== -1) {
           sheet.getRange(i + 1, nextFollowUpColIndex + 1).setValue('');
         }
 
@@ -731,7 +744,7 @@ function updateStatus(leadId, newStatus, dealValue = '', receiptNumber = '', los
         // Add history entry
         let historyNotes = `Lead status changed to '${newStatus}'`;
         if (dealValue) historyNotes += ` with deal value: ${dealValue}`;
-        if (receiptNumber && newStatus === 'Converted') historyNotes += ` | Receipt: ${receiptNumber}`;
+        if (receiptNumber && newStatus === 'Won') historyNotes += ` | Receipt: ${receiptNumber}`;
         if (lostReason && newStatus === 'Lost') historyNotes += ` | Reason: ${lostReason}`;
 
         addFollowUpHistory(leadId, new Date(), 'Status Change', newStatus, historyNotes, getCurrentUser());
@@ -1062,7 +1075,7 @@ function checkFollowUps() {
 
     leads.forEach(lead => {
       const status = lead.Status || 'New';
-      if (status !== 'Converted' && status !== 'Lost' && lead.NextFollowUp) {
+      if (status !== 'Won' && status !== 'Lost' && status !== 'Drop' && lead.NextFollowUp) {
         try {
           const followUpDate = new Date(lead.NextFollowUp);
           followUpDate.setHours(0, 0, 0, 0);
@@ -1344,11 +1357,13 @@ function getInitialData() {
     const teamMembers = getTeamMembers();
     const statusOptions = getStatusOptions();
     const sourceOptions = getSourceOptions();
+    const showroomOptions = getShowroomOptions();
 
     return {
       teamMembers: teamMembers,
       statusOptions: statusOptions,
-      sourceOptions: sourceOptions
+      sourceOptions: sourceOptions,
+      showroomOptions: showroomOptions
     };
 
   } catch (e) {
@@ -1356,7 +1371,8 @@ function getInitialData() {
     return {
       teamMembers: [],
       statusOptions: [],
-      sourceOptions: []
+      sourceOptions: [],
+      showroomOptions: []
     };
   }
 }
@@ -1394,7 +1410,7 @@ function updateMonthlyLeadSummaryForDate(dateToProcess, allLeadsData, allFollowU
   }
 
   // --- Historical Reconstruction Logic ---
-  const activeStatuses = ['Prospecting', 'Convincing', 'Negotiating', 'Converted'];
+  const activeStatuses = ['Prospecting', 'Convincing', 'Negotiation', 'Won'];
   let rowsToAdd = [];
 
   for (const lead of allLeadsData) {
@@ -1479,9 +1495,10 @@ function updateDailyDashboardStatsForDate(dateToProcess, allLeadsData, allFollow
         BecameInProgress_Count: 0, BecameInProgress_Value: 0,
         BecameProspecting_Count: 0, BecameProspecting_Value: 0,
         BecameConvincing_Count: 0, BecameConvincing_Value: 0,
-        BecameNegotiating_Count: 0, BecameNegotiating_Value: 0,
-        BecameConverted_Count: 0, BecameConverted_Value: 0,
+        BecameNegotiation_Count: 0, BecameNegotiation_Value: 0,
+        BecameWon_Count: 0, BecameWon_Value: 0,
         BecameLost_Count: 0, BecameLost_Value: 0,
+        BecameDrop_Count: 0, BecameDrop_Value: 0,
         LeadsContacted_Count: 0
     };
 
@@ -1535,9 +1552,10 @@ function updateDailyDashboardStatsForDate(dateToProcess, allLeadsData, allFollow
         dailyEvents.BecameInProgress_Count, dailyEvents.BecameInProgress_Value,
         dailyEvents.BecameProspecting_Count, dailyEvents.BecameProspecting_Value,
         dailyEvents.BecameConvincing_Count, dailyEvents.BecameConvincing_Value,
-        dailyEvents.BecameNegotiating_Count, dailyEvents.BecameNegotiating_Value,
-        dailyEvents.BecameConverted_Count, dailyEvents.BecameConverted_Value,
+        dailyEvents.BecameNegotiation_Count, dailyEvents.BecameNegotiation_Value,
+        dailyEvents.BecameWon_Count, dailyEvents.BecameWon_Value,
         dailyEvents.BecameLost_Count, dailyEvents.BecameLost_Value,
+        dailyEvents.BecameDrop_Count, dailyEvents.BecameDrop_Value,
         dailyEvents.LeadsContacted_Count
     ];
 
@@ -1570,8 +1588,8 @@ function updateTeamPerformanceDashboard() {
                     month: month, teamMember: member,
                     NewLeads_Count: 0, NewLeads_Value: 0, InProgress_Count: 0, InProgress_Value: 0,
                     Prospecting_Count: 0, Prospecting_Value: 0, Convincing_Count: 0, Convincing_Value: 0,
-                    Negotiating_Count: 0, Negotiating_Value: 0, Converted_Count: 0, Converted_Value: 0,
-                    Lost_Count: 0, Lost_Value: 0,
+                    Negotiation_Count: 0, Negotiation_Value: 0, Won_Count: 0, Won_Value: 0,
+                    Lost_Count: 0, Lost_Value: 0, Drop_Count: 0, Drop_Value: 0
                 };
             }
         };
@@ -1630,8 +1648,8 @@ function updateTeamPerformanceDashboard() {
             d.month, d.teamMember,
             d.NewLeads_Count, d.NewLeads_Value, d.InProgress_Count, d.InProgress_Value,
             d.Prospecting_Count, d.Prospecting_Value, d.Convincing_Count, d.Convincing_Value,
-            d.Negotiating_Count, d.Negotiating_Value, d.Converted_Count, d.Converted_Value,
-            d.Lost_Count, d.Lost_Value
+            d.Negotiation_Count, d.Negotiation_Value, d.Won_Count, d.Won_Value,
+            d.Lost_Count, d.Lost_Value, d.Drop_Count, d.Drop_Value
         ]);
 
         if (rows.length > 0) {

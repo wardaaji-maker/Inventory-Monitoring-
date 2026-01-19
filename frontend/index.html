@@ -12,9 +12,10 @@
         .status-in-progress { border-left: 4px solid #ffc107; }
         .status-prospecting { border-left: 4px solid #17a2b8; }
         .status-convincing { border-left: 4px solid #6f42c1; }
-        .status-negotiating { border-left: 4px solid #fd7e14; }
-        .status-converted { border-left: 4px solid #007bff; }
+        .status-negotiation { border-left: 4px solid #fd7e14; }
+        .status-won { border-left: 4px solid #007bff; }
         .status-lost { border-left: 4px solid #dc3545; }
+        .status-drop { border-left: 4px solid #6c757d; }
         .overdue { background-color: #fff3cd !important; }
         .due-today { background-color: #d1ecf1 !important; }
         .stat-card { transition: all 0.3s; }
@@ -84,24 +85,24 @@
             <div class="col-md-2 mb-3">
                 <div class="card stat-card bg-orange text-dark" style="background-color: #fd7e14;">
                     <div class="card-body text-center">
-                        <h4 id="statNegotiating">0</h4>
-                        <small>Negotiating</small>
-                        <div class="monthly-value" id="monthlyNegotiatingValue">Rp 0</div>
+                        <h4 id="statNegotiation">0</h4>
+                        <small>Negotiation</small>
+                        <div class="monthly-value" id="monthlyNegotiationValue">Rp 0</div>
                     </div>
                 </div>
             </div>
              <div class="col-md-2 mb-3">
                 <div class="card stat-card bg-secondary text-white">
                     <div class="card-body text-center">
-                        <h4 class="converted-value" id="monthlyConvertedValue">Rp 0</h4>
-                        <small>Converted</small>
-                        <div class="converted-count" id="statConverted">0 leads</div>
+                        <h4 class="converted-value" id="monthlyWonValue">Rp 0</h4>
+                        <small>Won</small>
+                        <div class="converted-count" id="statWon">0 leads</div>
                     </div>
                 </div>
             </div>
 
             <!-- Additional Stats Row -->
-            <div class="col-md-3 mb-3">
+            <div class="col mb-3">
                 <div class="card stat-card bg-danger text-white">
                      <div class="card-body text-center">
                         <h4 class="lost-value" id="monthlyLostValue">Rp 0</h4>
@@ -110,7 +111,16 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
+             <div class="col mb-3">
+                <div class="card stat-card bg-secondary text-white" style="background-color: #6c757d;">
+                     <div class="card-body text-center">
+                        <h4 class="lost-value" id="monthlyDropValue">Rp 0</h4>
+                        <small>Drop</small>
+                        <div class="lost-count" id="statDrop">0 leads</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col mb-3">
                 <div class="card stat-card bg-warning text-dark">
                     <div class="card-body text-center">
                         <h4 id="statDueToday">0</h4>
@@ -118,7 +128,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="col mb-3">
                 <div class="card stat-card bg-danger text-white">
                     <div class="card-body text-center">
                         <h4 id="statOverdue">0</h4>
@@ -126,7 +136,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-3 mb-3">
+            <div class="col mb-3">
                 <div class="card stat-card bg-success text-white">
                     <div class="card-body text-center">
                         <h4 id="monthlyTotalValue">Rp 0</h4>
@@ -237,7 +247,7 @@
                             <input type="email" class="form-control" id="leadEmail">
                         </div>
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label class="form-label">Source</label>
                                     <select class="form-select" id="leadSource">
@@ -245,7 +255,15 @@
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Showroom</label>
+                                    <select class="form-select" id="leadShowroom">
+                                        <!-- Options will be populated by JavaScript -->
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
                                 <div class="mb-3">
                                     <label class="form-label">Assigned To *</label>
                                     <select class="form-select" id="leadAssigned" required>
@@ -299,7 +317,7 @@
                         <div class="mb-3" id="receiptSection" style="display: none;">
                             <label class="form-label">Receipt Number *</label>
                             <input type="text" class="form-control" id="receiptNumber" placeholder="Enter receipt number" required>
-                            <small class="text-muted">Required when converting to Converted status</small>
+                            <small class="text-muted">Required when converting to Won status</small>
                         </div>
                          <div class="mb-3" id="reasonForLossSection" style="display: none;">
                             <label class="form-label">Reason for Loss *</label>
@@ -390,6 +408,7 @@
         let teamMembers = [];
         let statusOptions = [];
         let sourceOptions = [];
+        let showroomOptions = [];
 
         function initializeApp() {
             console.log('Page loaded, initializing...');
@@ -418,12 +437,14 @@
                 teamMembers = data.teamMembers || [];
                 statusOptions = data.statusOptions || [];
                 sourceOptions = data.sourceOptions || [];
+                showroomOptions = data.showroomOptions || [];
 
                 populateSelect('assignedFilter', teamMembers, 'All Team Members');
                 populateSelect('leadAssigned', teamMembers);
                 populateSelect('statusFilter', statusOptions, 'All Status');
                 populateSelect('newStatus', statusOptions);
                 populateSelect('leadSource', sourceOptions);
+                populateSelect('leadShowroom', showroomOptions);
 
              }).withFailureHandler(function(error) {
                 console.error('Error loading dropdown data:', error);
@@ -460,17 +481,19 @@
                 document.getElementById('statNew').textContent = stats.new || 0;
                 document.getElementById('statProspecting').textContent = stats.prospecting || 0;
                 document.getElementById('statConvincing').textContent = stats.convincing || 0;
-                document.getElementById('statNegotiating').textContent = stats.negotiating || 0;
-                document.getElementById('statConverted').textContent = `${stats.converted || 0} leads`;
+                document.getElementById('statNegotiation').textContent = stats.negotiation || 0;
+                document.getElementById('statWon').textContent = `${stats.won || 0} leads`;
                 document.getElementById('statLost').textContent = `${stats.lost || 0} leads`;
+                document.getElementById('statDrop').textContent = `${stats.drop || 0} leads`;
                 document.getElementById('statDueToday').textContent = stats.dueToday || 0;
                 document.getElementById('statOverdue').textContent = stats.overdue || 0;
 
                 document.getElementById('monthlyProspectingValue').textContent = 'Rp ' + formatNumber(stats.monthlyStats?.prospectingValue || 0);
                 document.getElementById('monthlyConvincingValue').textContent = 'Rp ' + formatNumber(stats.monthlyStats?.convincingValue || 0);
-                document.getElementById('monthlyNegotiatingValue').textContent = 'Rp ' + formatNumber(stats.monthlyStats?.negotiatingValue || 0);
-                document.getElementById('monthlyConvertedValue').textContent = 'Rp ' + formatNumber(stats.monthlyStats?.convertedValue || 0);
+                document.getElementById('monthlyNegotiationValue').textContent = 'Rp ' + formatNumber(stats.monthlyStats?.negotiationValue || 0);
+                document.getElementById('monthlyWonValue').textContent = 'Rp ' + formatNumber(stats.monthlyStats?.wonValue || 0);
                 document.getElementById('monthlyLostValue').textContent = 'Rp ' + formatNumber(stats.monthlyStats?.lostValue || 0);
+                document.getElementById('monthlyDropValue').textContent = 'Rp ' + formatNumber(stats.monthlyStats?.dropValue || 0);
                 document.getElementById('monthlyTotalValue').textContent = 'Rp ' + formatNumber(stats.monthlyStats?.totalValue || 0);
 
                 document.getElementById('dueTodayCount').textContent = `${stats.dueToday || 0} due today`;
@@ -499,8 +522,8 @@
             const handleStatusChange = () => {
                 const selectedStatus = statusSelect.value;
 
-                dealValueSection.style.display = ['Prospecting', 'Convincing', 'Negotiating', 'Converted', 'Lost'].includes(selectedStatus) ? 'block' : 'none';
-                receiptSection.style.display = selectedStatus === 'Converted' ? 'block' : 'none';
+                dealValueSection.style.display = ['Prospecting', 'Convincing', 'Negotiation', 'Won', 'Lost', 'Drop'].includes(selectedStatus) ? 'block' : 'none';
+                receiptSection.style.display = selectedStatus === 'Won' ? 'block' : 'none';
                 reasonForLossSection.style.display = selectedStatus === 'Lost' ? 'block' : 'none';
             };
 
@@ -518,7 +541,7 @@
             const receiptNumber = document.getElementById('receiptNumber').value;
             const reasonForLoss = document.getElementById('reasonForLoss').value;
 
-            if (newStatus === 'Converted' && !receiptNumber) {
+            if (newStatus === 'Won' && !receiptNumber) {
                 alert('Receipt number is required when converting a lead.');
                 return;
             }
@@ -597,6 +620,7 @@
                 const leadPhone = lead.Phone || 'No phone';
                 const leadEmail = lead.Email || 'No email';
                 const leadProduct = lead.Product || 'No product';
+                const leadShowroom = lead.Showroom || '-';
                 const leadStatus = lead.Status || 'New';
                 const leadAssigned = lead.AssignedTo || 'Team';
                 const followUpCount = lead.FollowUpCount || 0;
@@ -608,7 +632,7 @@
                 let dueClass = '';
                 let dueText = '';
 
-                if (nextFollowUp && !['Converted', 'Lost'].includes(leadStatus)) {
+                if (nextFollowUp && !['Won', 'Lost', 'Drop'].includes(leadStatus)) {
                     const followUpDate = new Date(nextFollowUp);
                     followUpDate.setHours(0, 0, 0, 0);
                     const daysDiff = Math.floor((today - followUpDate) / (1000 * 60 * 60 * 24));
@@ -637,6 +661,7 @@
                                     <i class="fas fa-phone"></i> ${leadPhone}<br>
                                     <i class="fas fa-envelope"></i> ${leadEmail}<br>
                                     <i class="fas fa-cube"></i> ${leadProduct}<br>
+                                    <i class="fas fa-store"></i> ${leadShowroom}<br>
                                     <i class="fas fa-user"></i> Assigned: ${leadAssigned}<br>
                                     <i class="fas fa-calendar"></i> Next: ${nextFollowUp ? nextFollowUp.toLocaleDateString() : 'Not set'}<br>
                                     <i class="fas fa-sync"></i> Follow-ups: ${followUpCount}
@@ -705,7 +730,7 @@
         function getStatusBadge(status) {
             const mapping = {
                 'New': 'success', 'In Progress': 'secondary', 'Prospecting': 'info',
-                'Convincing': 'primary', 'Negotiating': 'warning', 'Converted': 'success', 'Lost': 'danger'
+                'Convincing': 'primary', 'Negotiation': 'warning', 'Won': 'success', 'Lost': 'danger', 'Drop': 'secondary'
             };
             return mapping[status] || 'secondary';
         }
@@ -786,6 +811,7 @@
                 phone: document.getElementById('leadPhone').value,
                 email: document.getElementById('leadEmail').value,
                 source: document.getElementById('leadSource').value,
+                showroom: document.getElementById('leadShowroom').value,
                 assignedTo: document.getElementById('leadAssigned').value,
                 product: document.getElementById('leadProduct').value,
                 notes: document.getElementById('leadNotes').value
