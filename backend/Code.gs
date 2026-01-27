@@ -59,6 +59,12 @@ function checkAndRepairHeaders() {
     }
 
     const lastCol = headers.length;
+
+    // Ensure sheet is wide enough
+    if (sheet.getMaxColumns() < lastCol) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), lastCol - sheet.getMaxColumns());
+    }
+
     const headerRange = sheet.getRange(1, 1, 1, lastCol);
     const currentHeaders = headerRange.getValues()[0];
 
@@ -72,13 +78,7 @@ function checkAndRepairHeaders() {
         }
     }
 
-    // Ensure sheet is wide enough
-    if (sheet.getMaxColumns() < lastCol) {
-      sheet.insertColumnsAfter(sheet.getMaxColumns(), lastCol - sheet.getMaxColumns());
-    }
-
     if (needsUpdate) {
-      // Re-acquire range in case of resize or if safe to assume it fits now
       sheet.getRange(1, 1, 1, lastCol).setValues([headers]);
       Logger.log('Headers repaired.');
     }
@@ -408,6 +408,59 @@ function getDashboardStats() {
     feedbackCounts[fb] = (feedbackCounts[fb] || 0) + 1;
   });
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Helper for aggregation
+  const aggregate = (keyFn) => {
+    const groups = {};
+    clients.forEach(client => {
+      const key = keyFn(client) || 'Unassigned';
+      if (!groups[key]) {
+        groups[key] = {
+           total: 0,
+           followedUp: 0,
+           dueToday: 0,
+           overdue: 0,
+           progress: {},
+           feedback: {}
+        };
+      }
+
+      const g = groups[key];
+      g.total++;
+      if (client.totalFollowUps > 0) g.followedUp++;
+
+      if (client.nextFollowUp) {
+         const next = new Date(client.nextFollowUp);
+         next.setHours(0,0,0,0);
+         const todayTime = today.getTime();
+         const nextTime = next.getTime();
+
+         if (nextTime < todayTime) {
+           g.overdue++;
+         } else if (nextTime === todayTime) {
+           g.dueToday++;
+         }
+      }
+
+      // Progress
+      const p = client.progress || 'No Progress';
+      g.progress[p] = (g.progress[p] || 0) + 1;
+
+      // Feedback
+      const f = client.latestFeedback || 'No Feedback';
+      g.feedback[f] = (g.feedback[f] || 0) + 1;
+    });
+
+    // Calculate contribution %
+    Object.values(groups).forEach(g => {
+       g.contribution = g.total > 0 ? ((g.followedUp / g.total) * 100).toFixed(1) : 0;
+    });
+
+    return groups;
+  };
+
   return {
     totalClients: clients.length,
     dueFollowups: dueClients.length,
@@ -416,7 +469,9 @@ function getDashboardStats() {
       (clients.reduce((sum, client) => sum + client.totalFollowUps, 0) / clients.length).toFixed(1) : 0,
     followUpPercentage: followUpPercentage,
     progressCounts: progressCounts,
-    feedbackCounts: feedbackCounts
+    feedbackCounts: feedbackCounts,
+    storeStats: aggregate(c => c.storeCode),
+    picStats: aggregate(c => c.pic)
   };
 }
 

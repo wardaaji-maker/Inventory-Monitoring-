@@ -180,6 +180,7 @@
 
   <script>
     let allClients = [];
+    let currentStats = null;
 
     function init() {
       document.getElementById('followupDate').valueAsDate = new Date();
@@ -238,6 +239,7 @@
     }
 
     function renderDashboard(stats) {
+      currentStats = stats;
       document.getElementById('statsGrid').innerHTML = `
         <div class="stat-card"><div class="number">${stats.totalClients}</div><div>Total Clients</div></div>
         <div class="stat-card"><div class="number ${stats.dueFollowups>0?'urgent':''}">${stats.dueFollowups}</div><div>Due Today</div></div>
@@ -287,7 +289,106 @@
       html += '</div>';
 
       html += '</div>';
+
+      // Detailed Breakdown Section
+      html += `
+        <div style="margin-top:30px; background:white; padding:20px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h3>Detailed Statistics</h3>
+            <div>
+              <button class="btn" onclick="renderBreakdown('store')" id="btnStoreStats">By Store</button>
+              <button class="btn" onclick="renderBreakdown('pic')" id="btnPicStats">By PIC</button>
+            </div>
+          </div>
+          <div id="breakdownContent"></div>
+        </div>
+      `;
+
       document.getElementById('dashboardContent').innerHTML = html;
+
+      // Default view
+      renderBreakdown('store');
+    }
+
+    function renderBreakdown(type) {
+       const btnStore = document.getElementById('btnStoreStats');
+       const btnPic = document.getElementById('btnPicStats');
+
+       if (type === 'store') {
+          btnStore.classList.add('btn-success');
+          btnPic.classList.remove('btn-success');
+       } else {
+          btnStore.classList.remove('btn-success');
+          btnPic.classList.add('btn-success');
+       }
+
+       const data = type === 'store' ? currentStats.storeStats : currentStats.picStats;
+       if (!data) return;
+
+       const keys = Object.keys(data).sort();
+
+         if (keys.length === 0) {
+           document.getElementById('breakdownContent').innerHTML = '<p>No data available.</p>';
+           return;
+         }
+
+         // 1. Overview Table
+         let html = '<h4>Overview</h4><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Entity</th><th>Total Leads</th><th>Contribution %</th><th>Due Today</th><th>Overdue</th></tr></thead><tbody>';
+         keys.forEach(k => {
+            const d = data[k];
+            html += `<tr>
+              <td><strong>${k}</strong></td>
+              <td>${d.total}</td>
+              <td>${d.contribution}%</td>
+              <td>${d.dueToday}</td>
+              <td style="${d.overdue>0?'color:red; font-weight:bold;':''}">${d.overdue}</td>
+            </tr>`;
+         });
+         html += '</tbody></table></div>';
+
+         // 2. Progress Breakdown
+         const allProgress = new Set();
+         keys.forEach(k => {
+             if(data[k].progress) Object.keys(data[k].progress).forEach(p => allProgress.add(p));
+         });
+         const progCols = Array.from(allProgress).sort();
+
+         html += '<h4 style="margin-top:20px;">Progress Breakdown</h4><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Entity</th>';
+         progCols.forEach(p => html += `<th>${p}</th>`);
+         html += '</tr></thead><tbody>';
+
+         keys.forEach(k => {
+            html += `<tr><td><strong>${k}</strong></td>`;
+            progCols.forEach(p => {
+               const val = (data[k].progress && data[k].progress[p]) || 0;
+               html += `<td>${val}</td>`;
+            });
+            html += '</tr>';
+         });
+         html += '</tbody></table></div>';
+
+         // 3. Feedback Breakdown
+         const allFeedback = new Set();
+         keys.forEach(k => {
+             if(data[k].feedback) Object.keys(data[k].feedback).forEach(f => allFeedback.add(f));
+         });
+         const feedCols = Array.from(allFeedback).sort();
+
+         html += '<h4 style="margin-top:20px;">Feedback Breakdown</h4><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Entity</th>';
+         feedCols.forEach(f => html += `<th>${f}</th>`);
+         html += '</tr></thead><tbody>';
+
+         keys.forEach(k => {
+            html += `<tr><td><strong>${k}</strong></td>`;
+            feedCols.forEach(f => {
+               const val = (data[k].feedback && data[k].feedback[f]) || 0;
+               html += `<td>${val}</td>`;
+            });
+            html += '</tr>';
+         });
+         html += '</tbody></table></div>';
+
+         document.getElementById('breakdownContent').innerHTML = html;
     }
 
     function renderTable(clients, containerId) {
