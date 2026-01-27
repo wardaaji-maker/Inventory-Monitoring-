@@ -87,33 +87,127 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-// Get paginated clients with filtering
-function getClientsPaginated(page = 1, pageSize = 50, search = '', statusFilter = '') {
-  const allClients = getAllClients();
-  let filteredClients = allClients;
+// --- CORE DATA FUNCTIONS ---
 
-  // Apply search
+// Fetch raw data with row indices, filtering empty rows
+function getRawClientData() {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow <= 1) return [];
+
+  // Get all values at once
+  const data = sheet.getRange(2, 1, lastRow-1, 11 + CONFIG.MAX_FOLLOW_UPS).getValues();
+
+  // Map to wrapper object to preserve row index, filtering out empty client IDs
+  return data
+    .map((row, index) => ({
+      data: row,
+      rowIndex: index + 2
+    }))
+    .filter(item => item.data[COLUMNS.CLIENT_ID]);
+}
+
+// Process a single raw row into a rich client object
+function processClientRow(rowData, rowIndex) {
+  const row = rowData;
+
+  // Collect all follow-up dates
+  const followUpDates = [];
+  for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
+    if (row[COLUMNS.FOLLOW_UP_1 + i]) {
+      followUpDates.push(row[COLUMNS.FOLLOW_UP_1 + i]);
+    }
+  }
+
+  // Find next follow-up date (most recent future date)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let nextFollowUp = null;
+  let overdueFollowUps = 0;
+
+  followUpDates.forEach(date => {
+    if (date instanceof Date) {
+      const followUpDate = new Date(date);
+      followUpDate.setHours(0, 0, 0, 0);
+
+      if (followUpDate < today) {
+        overdueFollowUps++;
+      } else if (!nextFollowUp || followUpDate < nextFollowUp) {
+        nextFollowUp = followUpDate;
+      }
+    }
+  });
+
+  // If no future dates, find the most recent past date
+  if (!nextFollowUp && followUpDates.length > 0) {
+    const pastDates = followUpDates
+      .filter(date => date instanceof Date)
+      .sort((a, b) => b - a);
+    if (pastDates.length > 0) {
+      nextFollowUp = pastDates[0];
+    }
+  }
+
+  return {
+    row: rowIndex,
+    no: row[COLUMNS.NO],
+    clientId: row[COLUMNS.CLIENT_ID],
+    clientName: row[COLUMNS.CLIENT_NAME],
+    storeCode: row[COLUMNS.STORE_CODE],
+    phone: row[COLUMNS.PHONE],
+    email: row[COLUMNS.EMAIL],
+    address: row[COLUMNS.ADDRESS],
+    createdAt: row[COLUMNS.CREATED_AT],
+    pic: row[COLUMNS.PIC],
+    status: row[COLUMNS.STATUS],
+    progress: row[COLUMNS.PROGRESS],
+    followUpDates: followUpDates,
+    nextFollowUp: nextFollowUp,
+    overdueFollowUps: overdueFollowUps,
+    totalFollowUps: followUpDates.filter(d => d).length
+  };
+}
+
+// Optimized Pagination
+function getClientsPaginated(page = 1, pageSize = 50, search = '', statusFilter = '') {
+  // 1. Get raw data (fast)
+  let rawItems = getRawClientData();
+
+  // 2. Filter raw data (fast, string comparisons)
   if (search) {
     const searchLower = search.toLowerCase();
-    filteredClients = filteredClients.filter(client =>
-      (client.clientId && client.clientId.toString().toLowerCase().includes(searchLower)) ||
-      (client.clientName && client.clientName.toString().toLowerCase().includes(searchLower)) ||
-      (client.storeCode && client.storeCode.toString().toLowerCase().includes(searchLower)) ||
-      (client.phone && client.phone.toString().includes(searchLower)) ||
-      (client.email && client.email.toString().toLowerCase().includes(searchLower))
-    );
+    rawItems = rawItems.filter(item => {
+      const row = item.data;
+      return (
+        (row[COLUMNS.CLIENT_ID] && row[COLUMNS.CLIENT_ID].toString().toLowerCase().includes(searchLower)) ||
+        (row[COLUMNS.CLIENT_NAME] && row[COLUMNS.CLIENT_NAME].toString().toLowerCase().includes(searchLower)) ||
+        (row[COLUMNS.STORE_CODE] && row[COLUMNS.STORE_CODE].toString().toLowerCase().includes(searchLower)) ||
+        (row[COLUMNS.PHONE] && row[COLUMNS.PHONE].toString().includes(searchLower)) ||
+        (row[COLUMNS.EMAIL] && row[COLUMNS.EMAIL].toString().toLowerCase().includes(searchLower))
+      );
+    });
   }
 
-  // Apply status filter
   if (statusFilter) {
-    filteredClients = filteredClients.filter(client => client.status === statusFilter);
+    rawItems = rawItems.filter(item => item.data[COLUMNS.STATUS] === statusFilter);
   }
 
-  // Pagination
-  const total = filteredClients.length;
+  // 3. Pagination calculation
+  const total = rawItems.length;
   const totalPages = Math.ceil(total / pageSize);
+
+  // Adjust page if out of bounds
+  if (page < 1) page = 1;
+  if (page > totalPages && totalPages > 0) page = totalPages;
+
   const startIndex = (page - 1) * pageSize;
-  const paginatedClients = filteredClients.slice(startIndex, startIndex + pageSize);
+  const slicedItems = rawItems.slice(startIndex, startIndex + pageSize);
+
+  // 4. Process only the sliced rows (heavy lifting)
+  const paginatedClients = slicedItems.map(item => processClientRow(item.data, item.rowIndex));
 
   return {
     clients: paginatedClients,
@@ -124,107 +218,192 @@ function getClientsPaginated(page = 1, pageSize = 50, search = '', statusFilter 
   };
 }
 
-// Get all clients with enhanced data
-function getAllClients() {
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
-  const lastRow = sheet.getLastRow();
-
-  if (lastRow <= 1) return [];
-
-  const data = sheet.getRange(2, 1, lastRow-1, 11 + CONFIG.MAX_FOLLOW_UPS).getValues();
-
-  const clients = data.map((row, index) => {
-    // Collect all follow-up dates
-    const followUpDates = [];
-    for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
-      if (row[COLUMNS.FOLLOW_UP_1 + i]) {
-        followUpDates.push(row[COLUMNS.FOLLOW_UP_1 + i]);
-      }
-    }
-
-    // Find next follow-up date (most recent future date)
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    let nextFollowUp = null;
-    let overdueFollowUps = 0;
-
-    followUpDates.forEach(date => {
-      if (date instanceof Date) {
-        const followUpDate = new Date(date);
-        followUpDate.setHours(0, 0, 0, 0);
-
-        if (followUpDate < today) {
-          overdueFollowUps++;
-        } else if (!nextFollowUp || followUpDate < nextFollowUp) {
-          nextFollowUp = followUpDate;
-        }
-      }
-    });
-
-    // If no future dates, find the most recent past date
-    if (!nextFollowUp && followUpDates.length > 0) {
-      const pastDates = followUpDates
-        .filter(date => date instanceof Date)
-        .sort((a, b) => b - a);
-      if (pastDates.length > 0) {
-        nextFollowUp = pastDates[0];
-      }
-    }
-
-    return {
-      row: index + 2, // +2 because we start from row 2 and arrays are 0-indexed
-      no: row[COLUMNS.NO],
-      clientId: row[COLUMNS.CLIENT_ID],
-      clientName: row[COLUMNS.CLIENT_NAME],
-      storeCode: row[COLUMNS.STORE_CODE],
-      phone: row[COLUMNS.PHONE],
-      email: row[COLUMNS.EMAIL],
-      address: row[COLUMNS.ADDRESS],
-      createdAt: row[COLUMNS.CREATED_AT],
-      pic: row[COLUMNS.PIC],
-      status: row[COLUMNS.STATUS],
-      progress: row[COLUMNS.PROGRESS],
-      followUpDates: followUpDates,
-      nextFollowUp: nextFollowUp,
-      overdueFollowUps: overdueFollowUps,
-      totalFollowUps: followUpDates.filter(d => d).length
-    };
-  }).filter(client => client.clientId); // Filter out empty rows
-
-  return clients;
-}
-
-// Get clients needing follow-up today
-function getClientsNeedingFollowup() {
-  const clients = getAllClients();
+// Optimized Dashboard Stats
+function getDashboardStats() {
+  const rawItems = getRawClientData();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const dueClients = clients.filter(client => {
-    if (!client.nextFollowUp) return false;
+  let dueCount = 0;
+  let overdueCount = 0;
+  let totalFollowUps = 0;
+  const statusCounts = {};
 
-    const followUpDate = new Date(client.nextFollowUp);
-    followUpDate.setHours(0, 0, 0, 0);
+  // Iterate raw data once
+  for (const item of rawItems) {
+    const row = item.data;
 
-    // Check if follow-up is today or overdue
-    return followUpDate <= today;
-  });
+    // Status count
+    const status = row[COLUMNS.STATUS] || 'No Status';
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+    // Date Logic - Optimization: avoid creating full object
+    // Just find nextFollowUp and overdue status for this row
+    let rowHasOverdue = false;
+    let rowNextFollowUp = null;
+    let rowFollowUpsCount = 0;
+
+    // Scan follow-up columns
+    for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
+      const val = row[COLUMNS.FOLLOW_UP_1 + i];
+      if (val && val instanceof Date) {
+        rowFollowUpsCount++;
+        const date = new Date(val);
+        date.setHours(0, 0, 0, 0);
+
+        if (date < today) {
+          rowHasOverdue = true;
+        } else if (!rowNextFollowUp || date < rowNextFollowUp) {
+          rowNextFollowUp = date;
+        }
+      }
+    }
+
+    // Check overdue
+    if (rowHasOverdue) overdueCount++;
+
+    // Check due today
+    if (rowNextFollowUp) {
+       // If next follow up is today or earlier (but if earlier it's also overdue,
+       // but typically due means 'needs action now'. If it's overdue, it needs action now too.
+       // The original logic for 'Due' was: nextFollowUp <= today.
+       if (rowNextFollowUp <= today) {
+         dueCount++;
+       }
+    } else {
+        // Fallback: if no future date, check if there was a past date (which would be the nextFollowUp logic fallback)
+        // In the full logic: "If no future dates, find the most recent past date" -> set that as nextFollowUp.
+        // If that date <= today (which it is), then it counts as due.
+        // So effectively, if there are ANY dates, and no future dates, it is due/overdue.
+        if (rowFollowUpsCount > 0 && !rowNextFollowUp) {
+             // Logic match: nextFollowUp becomes the most recent past date.
+             // Since it is past, it is < today. So it is due.
+             dueCount++;
+        }
+    }
+
+    totalFollowUps += rowFollowUpsCount;
+  }
+
+  return {
+    totalClients: rawItems.length,
+    dueFollowups: dueCount,
+    overdueClients: overdueCount,
+    statusCounts: statusCounts,
+    avgFollowUps: rawItems.length > 0 ? (totalFollowUps / rawItems.length).toFixed(1) : 0
+  };
+}
+
+// Revert getAllClients to use the optimized flow if needed,
+// or keep it for legacy/export but use the new processing function
+function getAllClients() {
+  const rawItems = getRawClientData();
+  return rawItems.map(item => processClientRow(item.data, item.rowIndex));
+}
+
+// Get clients needing follow-up today (Optimized)
+function getClientsNeedingFollowup() {
+  // This one still needs to return rich objects, but we can filter first?
+  // Actually, deciding if it needs follow-up requires the date logic.
+  // So we must process rows. But maybe we can do it lazily?
+  // For now, let's use the full process but strictly for this view.
+  // If the user has 5000 due clients, this will still be slow.
+  // But typically due clients are a subset.
+
+  // Better approach: Calculate criteria on raw data first
+  const rawItems = getRawClientData();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const dueClients = [];
+
+  for (const item of rawItems) {
+    const row = item.data;
+    let isDue = false;
+
+    // Inline date logic check
+    let nextFollowUp = null;
+    let hasDates = false;
+
+    for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
+      const val = row[COLUMNS.FOLLOW_UP_1 + i];
+      if (val && val instanceof Date) {
+        hasDates = true;
+        const date = new Date(val);
+        date.setHours(0, 0, 0, 0);
+        if (date >= today) {
+           if (!nextFollowUp || date < nextFollowUp) {
+             nextFollowUp = date;
+           }
+        }
+      }
+    }
+
+    if (nextFollowUp && nextFollowUp.getTime() === today.getTime()) {
+      isDue = true;
+    } else if (!nextFollowUp && hasDates) {
+      // If all dates are past, it is effectively due/overdue
+      isDue = true;
+    } else if (nextFollowUp && nextFollowUp < today) {
+       // Should be covered by !nextFollowUp check if we only looked for future dates,
+       // but let's be safe.
+       isDue = true;
+    }
+
+    if (isDue) {
+      dueClients.push(processClientRow(item.data, item.rowIndex));
+    }
+  }
 
   return dueClients;
 }
 
-// Get overdue clients
+// Get overdue clients (Optimized)
 function getOverdueClients() {
-  const clients = getAllClients();
-  return clients.filter(client => client.overdueFollowUps > 0);
+  const rawItems = getRawClientData();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const overdueClients = [];
+
+  for (const item of rawItems) {
+    const row = item.data;
+    let hasOverdue = false;
+
+    for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
+       const val = row[COLUMNS.FOLLOW_UP_1 + i];
+       if (val && val instanceof Date) {
+         const date = new Date(val);
+         date.setHours(0, 0, 0, 0);
+         if (date < today) {
+           hasOverdue = true;
+           break;
+         }
+       }
+    }
+
+    if (hasOverdue) {
+      overdueClients.push(processClientRow(item.data, item.rowIndex));
+    }
+  }
+  return overdueClients;
 }
 
 // Get single client details
 function getClientDetails(row) {
-  const clients = getAllClients(); // Inefficient but safe. Could optimize to read single row.
-  return clients.find(c => c.row === row);
+  // Fetch just that row if possible, but getRawClientData reads all.
+  // Optimization: Read specific row directly.
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
+
+  // Row index is 1-based.
+  if (row < 2 || row > sheet.getLastRow()) return null;
+
+  const values = sheet.getRange(row, 1, 1, 11 + CONFIG.MAX_FOLLOW_UPS).getValues()[0];
+
+  if (!values[COLUMNS.CLIENT_ID]) return null;
+
+  return processClientRow(values, row);
 }
 
 // Record a new follow-up
@@ -232,7 +411,7 @@ function recordFollowup(clientRow, followupData) {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
 
-  // OPTIMIZATION: Read all follow-up columns in one go
+  // Read all follow-up columns in one go
   const range = sheet.getRange(clientRow, COLUMNS.FOLLOW_UP_1 + 1, 1, CONFIG.MAX_FOLLOW_UPS);
   const followUpValues = range.getValues()[0];
 
@@ -366,34 +545,6 @@ function sendFollowupNotification(clientRow, followupData) {
     htmlBody: htmlBody,
     name: 'Client Follow-up System'
   });
-}
-
-// Get dashboard statistics
-function getDashboardStats() {
-  const clients = getAllClients();
-  const today = new Date();
-  const dueClients = getClientsNeedingFollowup();
-
-  // Categorize by status
-  const statusCounts = {};
-  clients.forEach(client => {
-    const status = client.status || 'No Status';
-    statusCounts[status] = (statusCounts[status] || 0) + 1;
-  });
-
-  // Count overdue follow-ups
-  const overdueClients = clients.filter(client => client.overdueFollowUps > 0);
-
-  const stats = {
-    totalClients: clients.length,
-    dueFollowups: dueClients.length,
-    overdueClients: overdueClients.length,
-    statusCounts: statusCounts,
-    avgFollowUps: clients.length > 0 ?
-      (clients.reduce((sum, client) => sum + client.totalFollowUps, 0) / clients.length).toFixed(1) : 0
-  };
-
-  return stats;
 }
 
 // Update client status

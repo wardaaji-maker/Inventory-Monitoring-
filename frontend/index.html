@@ -220,6 +220,15 @@
         background-color: #eee;
         font-size: 0.9em;
     }
+
+    .error-message {
+        color: #e74c3c;
+        padding: 10px;
+        background-color: #fde8e8;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -451,11 +460,18 @@
     }
 
     function loadDashboard() {
-      google.script.run.withSuccessHandler(function(stats) {
-        updateStatsGrid(stats);
-        updateBadges(stats);
-        updateDashboardContent(stats);
-      }).getDashboardStats();
+      google.script.run
+        .withSuccessHandler(function(stats) {
+            updateStatsGrid(stats);
+            updateBadges(stats);
+            updateDashboardContent(stats);
+        })
+        .withFailureHandler(function(error) {
+             console.error('Dashboard load failed', error);
+             document.getElementById('dashboardContent').innerHTML =
+                '<div class="error-message">Failed to load dashboard data. <br> ' + error.message + '</div>';
+        })
+        .getDashboardStats();
     }
 
     function updateStatsGrid(stats) {
@@ -574,16 +590,30 @@
     }
 
     function loadClients(page) {
-      document.getElementById('clientsContent').innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading clients...</p>';
+      const container = document.getElementById('clientsContent');
+      container.innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading clients...</p>';
 
-      google.script.run.withSuccessHandler(function(response) {
-        allClients = response.clients; // Update local cache for modals
-        currentPage = response.page;
-        totalPages = response.totalPages;
+      // Disable pagination buttons while loading
+      document.getElementById('prevPageBtn').disabled = true;
+      document.getElementById('nextPageBtn').disabled = true;
 
-        displayClientsTable(response.clients, 'clientsContent');
-        updatePaginationControls(response.total);
-      }).getClientsPaginated(page, pageSize, currentSearchTerm, currentStatusFilter);
+      google.script.run
+        .withSuccessHandler(function(response) {
+            allClients = response.clients; // Update local cache for modals
+            currentPage = response.page;
+            totalPages = response.totalPages;
+
+            displayClientsTable(response.clients, 'clientsContent');
+            updatePaginationControls(response.total);
+        })
+        .withFailureHandler(function(error) {
+            container.innerHTML = `<div class="error-message">
+                <p><i class="fas fa-exclamation-circle"></i> Error loading clients</p>
+                <p>${error.message}</p>
+                <button class="btn" onclick="loadClients(${page})">Try Again</button>
+            </div>`;
+        })
+        .getClientsPaginated(page, pageSize, currentSearchTerm, currentStatusFilter);
     }
 
     function updatePaginationControls(totalRecords) {
@@ -735,7 +765,7 @@
 
         // Refresh all views
         loadDashboard();
-        loadAllClients();
+        loadClients(currentPage); // Refresh current page
         loadTabData(currentTab);
       }).withFailureHandler(function(error) {
         alert('Error: ' + error.message);
@@ -877,13 +907,16 @@
     }
 
     function loadDueClients() {
+      const container = document.getElementById('dueContent');
+      container.innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading due clients...</p>';
       google.script.run.withSuccessHandler(function(clients) {
         displayClientsTable(clients, 'dueContent');
       }).getClientsNeedingFollowup();
     }
 
     function loadOverdueClients() {
-      document.getElementById('overdueContent').innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading overdue clients...</p>';
+      const container = document.getElementById('overdueContent');
+      container.innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading overdue clients...</p>';
       google.script.run.withSuccessHandler(function(clients) {
         displayClientsTable(clients, 'overdueContent');
       }).getOverdueClients();
@@ -891,39 +924,46 @@
 
     function loadStatusView() {
       const statusCounts = {};
-      allClients.forEach(client => {
-        const status = client.status || 'No Status';
-        statusCounts[status] = (statusCounts[status] || 0) + 1;
-      });
+      // We need to fetch status counts if we want to click through, or just use the dashboard stats cache?
+      // Re-fetching or using dashboard stats would be better than relying on allClients if allClients is paginated.
+      // Wait, the previous implementation relied on 'allClients' being FULL.
+      // Now 'allClients' is only the current page!
+      // This breaks 'loadStatusView' if it iterates 'allClients'.
 
-      let html = '<div style="display: flex; flex-wrap: wrap; gap: 20px;">';
+      // FIX: use getDashboardStats to populate this view, as it has the counts.
+      document.getElementById('statusContent').innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading status...</p>';
 
-      Object.entries(statusCounts).forEach(([status, count]) => {
-        const percentage = ((count / allClients.length) * 100).toFixed(1);
+      google.script.run.withSuccessHandler(function(stats) {
+          const statusCounts = stats.statusCounts || {};
+          let html = '<div style="display: flex; flex-wrap: wrap; gap: 20px;">';
 
-        html += `
-          <div style="flex: 1; min-width: 200px; background: white; padding: 20px;
-                      border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-              <h3 style="margin: 0; color: #3498db;">${status}</h3>
-              <span style="font-size: 1.5rem; font-weight: bold;">${count}</span>
-            </div>
-            <div style="height: 10px; background: #f0f0f0; margin-top: 15px; border-radius: 5px;">
-              <div style="width: ${percentage}%; height: 100%; background: #3498db; border-radius: 5px;"></div>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-              <span style="font-size: 0.9rem; color: #666;">${percentage}%</span>
-              <button class="btn" onclick="viewClientsByStatus('${status}')"
-                      style="padding: 5px 10px; font-size: 0.8rem;">
-                View Clients
-              </button>
-            </div>
-          </div>
-        `;
-      });
+          Object.entries(statusCounts).forEach(([status, count]) => {
+            const percentage = ((count / stats.totalClients) * 100).toFixed(1);
 
-      html += '</div>';
-      document.getElementById('statusContent').innerHTML = html;
+            html += `
+              <div style="flex: 1; min-width: 200px; background: white; padding: 20px;
+                          border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <h3 style="margin: 0; color: #3498db;">${status}</h3>
+                  <span style="font-size: 1.5rem; font-weight: bold;">${count}</span>
+                </div>
+                <div style="height: 10px; background: #f0f0f0; margin-top: 15px; border-radius: 5px;">
+                  <div style="width: ${percentage}%; height: 100%; background: #3498db; border-radius: 5px;"></div>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                  <span style="font-size: 0.9rem; color: #666;">${percentage}%</span>
+                  <button class="btn" onclick="viewClientsByStatus('${status}')"
+                          style="padding: 5px 10px; font-size: 0.8rem;">
+                    View Clients
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+
+          html += '</div>';
+          document.getElementById('statusContent').innerHTML = html;
+      }).getDashboardStats();
     }
 
     function viewClientsByStatus(status) {
