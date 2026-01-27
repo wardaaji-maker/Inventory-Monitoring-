@@ -242,14 +242,50 @@
         <div class="stat-card"><div class="number">${stats.totalClients}</div><div>Total Clients</div></div>
         <div class="stat-card"><div class="number ${stats.dueFollowups>0?'urgent':''}">${stats.dueFollowups}</div><div>Due Today</div></div>
         <div class="stat-card"><div class="number ${stats.overdueClients>0?'urgent':''}">${stats.overdueClients}</div><div>Overdue</div></div>
-        <div class="stat-card"><div class="number">${stats.avgFollowUps}</div><div>Avg Follow-ups</div></div>
+        <div class="stat-card">
+           <div class="number">${stats.followUpPercentage}%</div>
+           <div style="font-size:0.9em; color:#777;">Follow-up Contribution</div>
+        </div>
       `;
 
-      // Status breakdown
-      let html = '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
-      for (const [status, count] of Object.entries(stats.statusCounts)) {
-        html += `<div style="background:#eee; padding:10px; border-radius:5px;"><strong>${status}</strong>: ${count}</div>`;
+      let html = '<div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">';
+
+      // Progress Breakdown
+      html += '<div style="background:white; padding:20px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">';
+      html += '<h3 style="margin-top:0; color:#3498db;">Progress Breakdown</h3>';
+      for (const [prog, count] of Object.entries(stats.progressCounts)) {
+        const pct = ((count / stats.totalClients) * 100).toFixed(1);
+        html += `
+          <div style="margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+              <strong>${prog}</strong>
+              <span>${count} (${pct}%)</span>
+            </div>
+            <div style="background:#eee; height:8px; border-radius:4px; overflow:hidden;">
+              <div style="background:#3498db; height:100%; width:${pct}%;"></div>
+            </div>
+          </div>`;
       }
+      html += '</div>';
+
+      // Feedback Breakdown
+      html += '<div style="background:white; padding:20px; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.05);">';
+      html += '<h3 style="margin-top:0; color:#2ecc71;">Feedback Breakdown</h3>';
+      for (const [fb, count] of Object.entries(stats.feedbackCounts)) {
+         const pct = ((count / stats.totalClients) * 100).toFixed(1);
+         html += `
+          <div style="margin-bottom:15px;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+              <span style="font-size:0.9em;">${fb}</span>
+              <span>${count}</span>
+            </div>
+            <div style="background:#eee; height:8px; border-radius:4px; overflow:hidden;">
+              <div style="background:#2ecc71; height:100%; width:${pct}%;"></div>
+            </div>
+          </div>`;
+      }
+      html += '</div>';
+
       html += '</div>';
       document.getElementById('dashboardContent').innerHTML = html;
     }

@@ -387,22 +387,36 @@ function sendFollowupNotification(clientRow, followupData) {
 function getDashboardStats() {
   const clients = getAllClients();
   const dueClients = getClientsNeedingFollowup();
+  const overdueClients = clients.filter(client => client.overdueFollowUps > 0);
 
-  const statusCounts = {};
+  // Follow-up Contribution
+  const clientsWithFollowUps = clients.filter(c => c.totalFollowUps > 0).length;
+  const followUpPercentage = clients.length > 0 ?
+    ((clientsWithFollowUps / clients.length) * 100).toFixed(1) : 0;
+
+  // Progress Counts
+  const progressCounts = {};
   clients.forEach(client => {
-    const status = client.status || 'No Status';
-    statusCounts[status] = (statusCounts[status] || 0) + 1;
+    const prog = client.progress || 'No Progress';
+    progressCounts[prog] = (progressCounts[prog] || 0) + 1;
   });
 
-  const overdueClients = clients.filter(client => client.overdueFollowUps > 0);
+  // Feedback Counts
+  const feedbackCounts = {};
+  clients.forEach(client => {
+    const fb = client.latestFeedback || 'No Feedback';
+    feedbackCounts[fb] = (feedbackCounts[fb] || 0) + 1;
+  });
 
   return {
     totalClients: clients.length,
     dueFollowups: dueClients.length,
     overdueClients: overdueClients.length,
-    statusCounts: statusCounts,
     avgFollowUps: clients.length > 0 ?
-      (clients.reduce((sum, client) => sum + client.totalFollowUps, 0) / clients.length).toFixed(1) : 0
+      (clients.reduce((sum, client) => sum + client.totalFollowUps, 0) / clients.length).toFixed(1) : 0,
+    followUpPercentage: followUpPercentage,
+    progressCounts: progressCounts,
+    feedbackCounts: feedbackCounts
   };
 }
 
