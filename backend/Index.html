@@ -76,9 +76,20 @@
         </div>
 
         <div id="clientsTab" class="tab-content">
-          <div style="display:flex; justify-content:space-between;">
+          <div style="display:flex; justify-content:space-between; flex-wrap: wrap; gap: 10px; align-items: center;">
             <h2>All Clients</h2>
-            <input type="text" id="searchClients" placeholder="Search..." onkeyup="filterClients()" style="padding:8px;">
+            <div style="display:flex; gap:10px;">
+              <select id="picFilter" onchange="filterClients()" style="padding:8px; border-radius:5px; border:1px solid #ddd;">
+                <option value="">All PICs</option>
+              </select>
+              <select id="progressFilter" onchange="filterClients()" style="padding:8px; border-radius:5px; border:1px solid #ddd;">
+                <option value="">All Progress</option>
+                <option value="PERKENALAN">PERKENALAN</option>
+                <option value="PENDEKATAN">PENDEKATAN</option>
+                <option value="TERHUBUNG">TERHUBUNG</option>
+              </select>
+              <input type="text" id="searchClients" placeholder="Search..." onkeyup="filterClients()" style="padding:8px; border-radius:5px; border:1px solid #ddd;">
+            </div>
           </div>
           <div id="clientsContent"></div>
         </div>
@@ -194,15 +205,27 @@
       google.script.run
         .withSuccessHandler(clients => {
           allClients = clients;
+          populateFilters();
           renderTable(clients, 'clientsContent');
-          // Also populate due/overdue tabs locally for speed or re-fetch?
-          // Let's rely on filter for now or re-fetch logic if needed.
-          // Re-fetching specific tabs ensures fresh calculation.
           loadDueClients();
           loadOverdueClients();
         })
         .withFailureHandler(showError)
         .getAllClients();
+    }
+
+    function populateFilters() {
+      const picSelect = document.getElementById('picFilter');
+      // Keep first option (All PICs)
+      picSelect.innerHTML = '<option value="">All PICs</option>';
+
+      const pics = [...new Set(allClients.map(c => c.pic).filter(p => p))].sort();
+      pics.forEach(pic => {
+        const opt = document.createElement('option');
+        opt.value = pic;
+        opt.textContent = pic;
+        picSelect.appendChild(opt);
+      });
     }
 
     function loadDueClients() {
@@ -336,10 +359,17 @@
 
     function filterClients() {
       const term = document.getElementById('searchClients').value.toLowerCase();
-      const filtered = allClients.filter(c =>
-        c.clientName.toLowerCase().includes(term) ||
-        c.clientId.toLowerCase().includes(term)
-      );
+      const pic = document.getElementById('picFilter').value;
+      const progress = document.getElementById('progressFilter').value;
+
+      const filtered = allClients.filter(c => {
+        const matchesTerm = c.clientName.toLowerCase().includes(term) ||
+                            c.clientId.toLowerCase().includes(term);
+        const matchesPic = !pic || c.pic === pic;
+        const matchesProgress = !progress || c.progress === progress;
+
+        return matchesTerm && matchesPic && matchesProgress;
+      });
       renderTable(filtered, 'clientsContent');
     }
 
