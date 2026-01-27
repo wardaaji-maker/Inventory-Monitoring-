@@ -295,7 +295,7 @@
       if (!clients.length) { div.innerHTML = 'No data.'; return; }
 
       let html = `<table class="data-table"><thead><tr>
-        <th>ID</th><th>Name</th><th>Phone</th><th>Status</th><th>Progress</th><th>Latest Feedback</th><th>Next Follow-up</th><th>Actions</th>
+        <th>ID</th><th>Name</th><th>PIC</th><th>Phone</th><th>Status</th><th>Progress</th><th>Latest Feedback</th><th>Next Follow-up</th><th>Follow-ups</th><th>Actions</th>
       </tr></thead><tbody>`;
 
       clients.forEach(c => {
@@ -305,11 +305,13 @@
         html += `<tr>
           <td><span class="store-code">${c.clientId}</span></td>
           <td>${c.clientName}</td>
+          <td>${c.pic || '-'}</td>
           <td>${c.phone}</td>
           <td>${c.status}</td>
           <td>${c.progress || '-'}</td>
           <td>${c.latestFeedback || '-'}</td>
           <td style="${urgent}">${next}</td>
+          <td style="text-align: center;"><span style="background: #e8f4fc; padding: 2px 8px; border-radius: 10px; font-weight: bold;">${c.totalFollowUps}</span></td>
           <td>
             <button class="btn" onclick="openFollowup(${c.row})"><i class="fas fa-plus"></i></button>
             <button class="btn" onclick="viewDetails(${c.row})"><i class="fas fa-history"></i></button>
