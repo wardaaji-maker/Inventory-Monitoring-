@@ -294,15 +294,40 @@
     }
 
     function viewDetails(row) {
+      const c = allClients.find(x => x.row === row);
+      if (!c) return;
+
+      const detailsHtml = `
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px; background:#f8f9fa; padding:15px; border-radius:5px;">
+          <div>
+            <p><strong>Name:</strong> ${c.clientName}</p>
+            <p><strong>ID:</strong> <span class="store-code">${c.clientId}</span></p>
+            <p><strong>PIC:</strong> ${c.pic || '-'}</p>
+            <p><strong>Store Code:</strong> ${c.storeCode || '-'}</p>
+          </div>
+          <div>
+            <p><strong>Phone:</strong> ${c.phone || '-'}</p>
+            <p><strong>Email:</strong> ${c.email || '-'}</p>
+            <p><strong>Address:</strong> ${c.address || '-'}</p>
+            <p><strong>Status:</strong> ${c.status}</p>
+          </div>
+        </div>
+        <h3>Follow-up History</h3>
+      `;
+
       google.script.run.withSuccessHandler(history => {
-        let html = '<table class="data-table"><thead><tr><th>Date</th><th>Type</th><th>Feedback</th></tr></thead><tbody>';
-        history.forEach(h => {
-          html += `<tr>
-            <td>${new Date(h.date).toLocaleDateString()}</td>
-            <td>Follow-up</td>
-            <td>${h.feedback}</td>
-          </tr>`;
-        });
+        let html = detailsHtml + '<table class="data-table"><thead><tr><th>Date</th><th>Type</th><th>Feedback</th></tr></thead><tbody>';
+        if (history.length === 0) {
+          html += '<tr><td colspan="3" style="text-align:center;">No history recorded.</td></tr>';
+        } else {
+          history.forEach(h => {
+            html += `<tr>
+              <td>${new Date(h.date).toLocaleDateString()}</td>
+              <td>Follow-up</td>
+              <td>${h.feedback}</td>
+            </tr>`;
+          });
+        }
         html += '</tbody></table>';
         document.getElementById('clientDetailsContent').innerHTML = html;
         document.getElementById('clientDetailsModal').style.display = 'flex';
