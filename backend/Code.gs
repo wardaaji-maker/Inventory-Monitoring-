@@ -87,6 +87,43 @@ function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+// Get paginated clients with filtering
+function getClientsPaginated(page = 1, pageSize = 50, search = '', statusFilter = '') {
+  const allClients = getAllClients();
+  let filteredClients = allClients;
+
+  // Apply search
+  if (search) {
+    const searchLower = search.toLowerCase();
+    filteredClients = filteredClients.filter(client =>
+      (client.clientId && client.clientId.toString().toLowerCase().includes(searchLower)) ||
+      (client.clientName && client.clientName.toString().toLowerCase().includes(searchLower)) ||
+      (client.storeCode && client.storeCode.toString().toLowerCase().includes(searchLower)) ||
+      (client.phone && client.phone.toString().includes(searchLower)) ||
+      (client.email && client.email.toString().toLowerCase().includes(searchLower))
+    );
+  }
+
+  // Apply status filter
+  if (statusFilter) {
+    filteredClients = filteredClients.filter(client => client.status === statusFilter);
+  }
+
+  // Pagination
+  const total = filteredClients.length;
+  const totalPages = Math.ceil(total / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const paginatedClients = filteredClients.slice(startIndex, startIndex + pageSize);
+
+  return {
+    clients: paginatedClients,
+    total: total,
+    page: page,
+    totalPages: totalPages,
+    pageSize: pageSize
+  };
+}
+
 // Get all clients with enhanced data
 function getAllClients() {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
@@ -176,6 +213,18 @@ function getClientsNeedingFollowup() {
   });
 
   return dueClients;
+}
+
+// Get overdue clients
+function getOverdueClients() {
+  const clients = getAllClients();
+  return clients.filter(client => client.overdueFollowUps > 0);
+}
+
+// Get single client details
+function getClientDetails(row) {
+  const clients = getAllClients(); // Inefficient but safe. Could optimize to read single row.
+  return clients.find(c => c.row === row);
 }
 
 // Record a new follow-up

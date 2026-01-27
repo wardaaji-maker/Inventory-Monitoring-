@@ -287,6 +287,18 @@
               </select>
             </div>
           </div>
+
+          <!-- Pagination Controls -->
+          <div id="paginationControls" style="display: flex; justify-content: center; align-items: center; margin-top: 15px; gap: 15px;">
+             <button class="btn" onclick="changePage(-1)" id="prevPageBtn" disabled>
+               <i class="fas fa-chevron-left"></i> Prev
+             </button>
+             <span id="pageInfo">Page 1</span>
+             <button class="btn" onclick="changePage(1)" id="nextPageBtn" disabled>
+               Next <i class="fas fa-chevron-right"></i>
+             </button>
+          </div>
+
           <div id="clientsContent">
             <!-- Clients table -->
           </div>
@@ -406,8 +418,16 @@
   </div>
 
   <script>
-    let allClients = [];
+    let allClients = []; // Kept for modal access, but stores only current page now
     let currentFilter = '';
+
+    // Pagination State
+    let currentPage = 1;
+    let pageSize = 50;
+    let totalPages = 1;
+    let currentSearchTerm = '';
+    let currentStatusFilter = '';
+    let searchTimeout = null;
 
     function initApp() {
       // Set default follow-up date to today
@@ -415,7 +435,8 @@
 
       // Load initial data
       loadDashboard();
-      loadAllClients();
+      loadClients(1); // Load first page
+      loadStatusOptions(); // Load status options separately
       setupEventListeners();
 
       // Set up auto-refresh every 5 minutes
@@ -534,18 +555,54 @@
       `;
     }
 
-    function loadAllClients() {
-      google.script.run.withSuccessHandler(function(clients) {
-        allClients = clients;
-        displayClientsTable(clients, 'clientsContent');
-        populateStatusFilter(clients);
-      }).getAllClients();
+    function loadStatusOptions() {
+         google.script.run.withSuccessHandler(function(stats) {
+            const statusFilter = document.getElementById('statusFilter');
+            // Keep "All Status"
+            while (statusFilter.options.length > 1) {
+                statusFilter.remove(1);
+            }
+            if (stats.statusCounts) {
+                Object.keys(stats.statusCounts).forEach(status => {
+                    const option = document.createElement('option');
+                    option.value = status;
+                    option.textContent = status;
+                    statusFilter.appendChild(option);
+                });
+            }
+         }).getDashboardStats();
+    }
+
+    function loadClients(page) {
+      document.getElementById('clientsContent').innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading clients...</p>';
+
+      google.script.run.withSuccessHandler(function(response) {
+        allClients = response.clients; // Update local cache for modals
+        currentPage = response.page;
+        totalPages = response.totalPages;
+
+        displayClientsTable(response.clients, 'clientsContent');
+        updatePaginationControls(response.total);
+      }).getClientsPaginated(page, pageSize, currentSearchTerm, currentStatusFilter);
+    }
+
+    function updatePaginationControls(totalRecords) {
+        document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages} (${totalRecords} clients)`;
+        document.getElementById('prevPageBtn').disabled = currentPage <= 1;
+        document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
+    }
+
+    function changePage(delta) {
+        const newPage = currentPage + delta;
+        if (newPage >= 1 && newPage <= totalPages) {
+            loadClients(newPage);
+        }
     }
 
     function displayClientsTable(clients, containerId) {
       const container = document.getElementById(containerId);
 
-      if (clients.length === 0) {
+      if (!clients || clients.length === 0) {
         container.innerHTML = '<p>No clients found.</p>';
         return;
       }
@@ -623,24 +680,6 @@
 
       html += '</tbody></table>';
       container.innerHTML = html;
-    }
-
-    function populateStatusFilter(clients) {
-      const statusFilter = document.getElementById('statusFilter');
-      const uniqueStatuses = [...new Set(clients.map(c => c.status).filter(Boolean))];
-
-      // Clear existing options except the first
-      while (statusFilter.options.length > 1) {
-        statusFilter.remove(1);
-      }
-
-      // Add unique statuses
-      uniqueStatuses.forEach(status => {
-        const option = document.createElement('option');
-        option.value = status;
-        option.textContent = status;
-        statusFilter.appendChild(option);
-      });
     }
 
     function openFollowupModal(clientRow) {
@@ -754,26 +793,20 @@
     }
 
     function searchClients() {
-      const searchTerm = document.getElementById('searchClients').value.toLowerCase();
-      const statusFilter = document.getElementById('statusFilter').value;
+      const term = document.getElementById('searchClients').value;
 
-      let filteredClients = allClients.filter(client =>
-        (client.clientId && client.clientId.toLowerCase().includes(searchTerm)) ||
-        (client.clientName && client.clientName.toLowerCase().includes(searchTerm)) ||
-        (client.storeCode && client.storeCode.toLowerCase().includes(searchTerm)) ||
-        (client.phone && client.phone.includes(searchTerm)) ||
-        (client.email && client.email.toLowerCase().includes(searchTerm))
-      );
+      // Debounce
+      if (searchTimeout) clearTimeout(searchTimeout);
 
-      if (statusFilter) {
-        filteredClients = filteredClients.filter(client => client.status === statusFilter);
-      }
-
-      displayClientsTable(filteredClients, 'clientsContent');
+      searchTimeout = setTimeout(() => {
+          currentSearchTerm = term;
+          loadClients(1); // Reset to page 1
+      }, 500);
     }
 
     function filterClients() {
-      searchClients();
+      currentStatusFilter = document.getElementById('statusFilter').value;
+      loadClients(1);
     }
 
     function sendTestReminder() {
@@ -850,8 +883,10 @@
     }
 
     function loadOverdueClients() {
-      const overdueClients = allClients.filter(client => client.overdueFollowUps > 0);
-      displayClientsTable(overdueClients, 'overdueContent');
+      document.getElementById('overdueContent').innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading overdue clients...</p>';
+      google.script.run.withSuccessHandler(function(clients) {
+        displayClientsTable(clients, 'overdueContent');
+      }).getOverdueClients();
     }
 
     function loadStatusView() {
@@ -892,12 +927,13 @@
     }
 
     function viewClientsByStatus(status) {
-      const filteredClients = allClients.filter(client =>
-        (client.status || 'No Status') === status
-      );
+      // Set the filter
+      document.getElementById('statusFilter').value = status;
+      currentStatusFilter = status;
 
-      displayClientsTable(filteredClients, 'statusContent');
-      showTab('byStatus');
+      // Switch tab and load
+      showTab('clients');
+      loadClients(1);
     }
 
     function loadHistory() {
