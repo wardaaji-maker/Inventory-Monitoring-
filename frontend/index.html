@@ -3,7 +3,9 @@
 <head>
   <base target="_top">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <style>
+    /* ... (keep the same CSS styles from previous version, just update colors if needed) ... */
     :root {
       --primary: #3498db;
       --success: #2ecc71;
@@ -15,174 +17,250 @@
     }
 
     body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f5f5f5;
-        margin: 0;
-        padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f7f9;
+      margin: 0;
+      padding: 0;
+      color: #333;
     }
 
     .container {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
     }
 
     .header {
-        background-color: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 20px;
+      background-color: white;
+      padding: 15px 25px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
-    .header h1 { margin: 0; color: var(--dark); }
+    .header h1 {
+      margin: 0;
+      color: var(--dark);
+      font-size: 1.5rem;
+    }
 
     .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
-        margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      margin-bottom: 20px;
     }
 
     .stat-card {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        text-align: center;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      text-align: center;
+      transition: transform 0.2s;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
     }
 
     .stat-card .number {
-        font-size: 2.5em;
-        font-weight: bold;
-        color: var(--primary);
+      font-size: 2.5rem;
+      font-weight: bold;
+      color: var(--primary);
+      margin-bottom: 5px;
     }
 
-    .stat-card .number.urgent { color: var(--danger); }
-    .stat-card .label { color: #7f8c8d; }
+    .stat-card .label {
+      color: #666;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .number.urgent {
+      color: var(--danger);
+    }
 
     .content {
-        display: grid;
-        grid-template-columns: 250px 1fr;
-        gap: 20px;
+      display: flex;
+      flex: 1;
+      gap: 20px;
+      overflow: hidden;
     }
 
     .sidebar {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      width: 250px;
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     .sidebar button {
-        display: block;
-        width: 100%;
-        padding: 12px 15px;
-        margin-bottom: 10px;
-        background: none;
-        border: none;
-        text-align: left;
-        cursor: pointer;
-        border-radius: 5px;
-        color: var(--dark);
-        transition: background 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 15px;
+      border: none;
+      background: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #555;
+      font-size: 0.95rem;
+      transition: all 0.2s;
+      text-align: left;
     }
 
-    .sidebar button:hover, .sidebar button.active {
-        background-color: var(--light);
-        color: var(--primary);
-        font-weight: bold;
+    .sidebar button:hover {
+      background-color: #f8f9fa;
+      color: var(--primary);
     }
 
-    .sidebar button i { margin-right: 10px; width: 20px; text-align: center; }
+    .sidebar button.active {
+      background-color: #e8f4fc;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    .sidebar i {
+      width: 20px;
+    }
 
     .main-content {
-        background: white;
-        padding: 20px;
-        border-radius: 10px;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        min-height: 500px;
+      flex: 1;
+      background: white;
+      border-radius: 10px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      overflow-y: auto;
     }
 
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    .data-table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 15px;
+    .tab-content {
+      display: none;
     }
 
-    .data-table th, .data-table td {
-        padding: 12px;
-        text-align: left;
-        border-bottom: 1px solid #eee;
+    .tab-content.active {
+      display: block;
+      animation: fadeIn 0.3s ease-in-out;
     }
 
-    .data-table th {
-        background-color: #f8f9fa;
-        color: #7f8c8d;
-        font-weight: 600;
-    }
-
-    .data-table tr:hover { background-color: #f8f9fa; }
-    .data-table tr.urgent { background-color: #fff5f5; }
-
-    .btn {
-        padding: 8px 15px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        background-color: var(--primary);
-        color: white;
-        font-size: 0.9em;
-        transition: background 0.3s;
-    }
-
-    .btn:hover { background-color: #2980b9; }
-    .btn-success { background-color: var(--success); }
-    .btn-success:hover { background-color: #27ae60; }
-
-    .modal {
-        display: none;
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background-color: rgba(0,0,0,0.5);
-        justify-content: center;
-        align-items: center;
-        z-index: 1000;
-    }
-
-    .modal-content {
-        background-color: white;
-        padding: 30px;
-        border-radius: 10px;
-        width: 500px;
-        max-width: 90%;
-        max-height: 90vh;
-        overflow-y: auto;
-    }
-
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
-    .form-group input, .form-group select, .form-group textarea {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ddd;
-        border-radius: 5px;
-        box-sizing: border-box;
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
     .badge {
-        background: var(--danger);
-        color: white;
-        padding: 2px 6px;
-        border-radius: 10px;
-        font-size: 0.8em;
-        margin-left: 5px;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      color: white;
+      margin-left: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .data-table th, .data-table td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #eee;
+    }
+
+    .data-table th {
+      background-color: #f8f9fa;
+      font-weight: 600;
+      color: #444;
+    }
+
+    .data-table tbody tr:hover {
+      background-color: #f8f9fa;
+    }
+
+    .data-table tr.urgent td {
+      background-color: #fff5f5;
+    }
+
+    .btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+      background-color: #e0e0e0;
+      color: #333;
+    }
+
+    .btn:hover {
+      background-color: #d0d0d0;
+    }
+
+    .btn-success {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background-color: #27ae60;
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.5);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-content {
+      background-color: white;
+      padding: 30px;
+      border-radius: 10px;
+      width: 500px;
+      max-width: 90%;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: 500;
+      color: #555;
+    }
+
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 0.95rem;
+    }
+
+    .form-group textarea {
+      resize: vertical;
     }
 
     /* Add specific styles for your structure */
@@ -212,22 +290,6 @@
       font-family: 'Courier New', monospace;
       font-weight: bold;
       color: var(--dark);
-    }
-
-    .status-badge {
-        padding: 4px 8px;
-        border-radius: 4px;
-        background-color: #eee;
-        font-size: 0.9em;
-    }
-
-    .error-message {
-        color: #e74c3c;
-        padding: 10px;
-        background-color: #fde8e8;
-        border-radius: 5px;
-        margin-bottom: 15px;
-        text-align: center;
     }
   </style>
 </head>
@@ -296,18 +358,6 @@
               </select>
             </div>
           </div>
-
-          <!-- Pagination Controls -->
-          <div id="paginationControls" style="display: flex; justify-content: center; align-items: center; margin-top: 15px; gap: 15px;">
-             <button class="btn" onclick="changePage(-1)" id="prevPageBtn" disabled>
-               <i class="fas fa-chevron-left"></i> Prev
-             </button>
-             <span id="pageInfo">Page 1</span>
-             <button class="btn" onclick="changePage(1)" id="nextPageBtn" disabled>
-               Next <i class="fas fa-chevron-right"></i>
-             </button>
-          </div>
-
           <div id="clientsContent">
             <!-- Clients table -->
           </div>
@@ -427,16 +477,8 @@
   </div>
 
   <script>
-    let allClients = []; // Kept for modal access, but stores only current page now
+    let allClients = [];
     let currentFilter = '';
-
-    // Pagination State
-    let currentPage = 1;
-    let pageSize = 50;
-    let totalPages = 1;
-    let currentSearchTerm = '';
-    let currentStatusFilter = '';
-    let searchTimeout = null;
 
     function initApp() {
       // Set default follow-up date to today
@@ -444,8 +486,7 @@
 
       // Load initial data
       loadDashboard();
-      loadClients(1); // Load first page
-      loadStatusOptions(); // Load status options separately
+      loadAllClients();
       setupEventListeners();
 
       // Set up auto-refresh every 5 minutes
@@ -462,16 +503,41 @@
     function loadDashboard() {
       google.script.run
         .withSuccessHandler(function(stats) {
-            updateStatsGrid(stats);
-            updateBadges(stats);
-            updateDashboardContent(stats);
+          updateStatsGrid(stats);
+          updateBadges(stats);
+          updateDashboardContent(stats);
         })
-        .withFailureHandler(function(error) {
-             console.error('Dashboard load failed', error);
-             document.getElementById('dashboardContent').innerHTML =
-                '<div class="error-message">Failed to load dashboard data. <br> ' + error.message + '</div>';
-        })
+        .withFailureHandler(showGlobalError)
         .getDashboardStats();
+    }
+
+    function showGlobalError(error) {
+      console.error('App Error:', error);
+      const container = document.querySelector('.container');
+      const existingError = document.getElementById('global-error-banner');
+
+      const errorMessage = error.message || error.toString();
+
+      if (!existingError) {
+        const errDiv = document.createElement('div');
+        errDiv.id = 'global-error-banner';
+        errDiv.style.cssText = `
+          background-color: #fee2e2;
+          color: #b91c1c;
+          padding: 15px;
+          margin-bottom: 20px;
+          border-radius: 8px;
+          border: 1px solid #f87171;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        `;
+        errDiv.innerHTML = `
+          <span><strong>System Error:</strong> ${errorMessage}</span>
+          <button onclick="this.parentElement.remove()" style="background:none; border:none; color:#b91c1c; cursor:pointer; font-size:1.2em;">&times;</button>
+        `;
+        container.insertBefore(errDiv, container.querySelector('.content') || container.firstChild);
+      }
     }
 
     function updateStatsGrid(stats) {
@@ -571,68 +637,27 @@
       `;
     }
 
-    function loadStatusOptions() {
-         google.script.run.withSuccessHandler(function(stats) {
-            const statusFilter = document.getElementById('statusFilter');
-            // Keep "All Status"
-            while (statusFilter.options.length > 1) {
-                statusFilter.remove(1);
-            }
-            if (stats.statusCounts) {
-                Object.keys(stats.statusCounts).forEach(status => {
-                    const option = document.createElement('option');
-                    option.value = status;
-                    option.textContent = status;
-                    statusFilter.appendChild(option);
-                });
-            }
-         }).getDashboardStats();
-    }
-
-    function loadClients(page) {
+    function loadAllClients() {
       const container = document.getElementById('clientsContent');
-      container.innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading clients...</p>';
-
-      // Disable pagination buttons while loading
-      document.getElementById('prevPageBtn').disabled = true;
-      document.getElementById('nextPageBtn').disabled = true;
+      container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;"><i class="fas fa-spinner fa-spin"></i> Loading clients...</div>';
 
       google.script.run
-        .withSuccessHandler(function(response) {
-            allClients = response.clients; // Update local cache for modals
-            currentPage = response.page;
-            totalPages = response.totalPages;
-
-            displayClientsTable(response.clients, 'clientsContent');
-            updatePaginationControls(response.total);
+        .withSuccessHandler(function(clients) {
+          allClients = clients;
+          displayClientsTable(clients, 'clientsContent');
+          populateStatusFilter(clients);
         })
         .withFailureHandler(function(error) {
-            container.innerHTML = `<div class="error-message">
-                <p><i class="fas fa-exclamation-circle"></i> Error loading clients</p>
-                <p>${error.message}</p>
-                <button class="btn" onclick="loadClients(${page})">Try Again</button>
-            </div>`;
+          container.innerHTML = `<div style="padding: 20px; color: #e74c3c;">Failed to load clients: ${error.message}</div>`;
+          showGlobalError(error);
         })
-        .getClientsPaginated(page, pageSize, currentSearchTerm, currentStatusFilter);
-    }
-
-    function updatePaginationControls(totalRecords) {
-        document.getElementById('pageInfo').textContent = `Page ${currentPage} of ${totalPages} (${totalRecords} clients)`;
-        document.getElementById('prevPageBtn').disabled = currentPage <= 1;
-        document.getElementById('nextPageBtn').disabled = currentPage >= totalPages;
-    }
-
-    function changePage(delta) {
-        const newPage = currentPage + delta;
-        if (newPage >= 1 && newPage <= totalPages) {
-            loadClients(newPage);
-        }
+        .getAllClients();
     }
 
     function displayClientsTable(clients, containerId) {
       const container = document.getElementById(containerId);
 
-      if (!clients || clients.length === 0) {
+      if (clients.length === 0) {
         container.innerHTML = '<p>No clients found.</p>';
         return;
       }
@@ -712,6 +737,24 @@
       container.innerHTML = html;
     }
 
+    function populateStatusFilter(clients) {
+      const statusFilter = document.getElementById('statusFilter');
+      const uniqueStatuses = [...new Set(clients.map(c => c.status).filter(Boolean))];
+
+      // Clear existing options except the first
+      while (statusFilter.options.length > 1) {
+        statusFilter.remove(1);
+      }
+
+      // Add unique statuses
+      uniqueStatuses.forEach(status => {
+        const option = document.createElement('option');
+        option.value = status;
+        option.textContent = status;
+        statusFilter.appendChild(option);
+      });
+    }
+
     function openFollowupModal(clientRow) {
       // Find client data
       const client = allClients.find(c => c.row === clientRow);
@@ -765,7 +808,7 @@
 
         // Refresh all views
         loadDashboard();
-        loadClients(currentPage); // Refresh current page
+        loadAllClients();
         loadTabData(currentTab);
       }).withFailureHandler(function(error) {
         alert('Error: ' + error.message);
@@ -823,20 +866,26 @@
     }
 
     function searchClients() {
-      const term = document.getElementById('searchClients').value;
+      const searchTerm = document.getElementById('searchClients').value.toLowerCase();
+      const statusFilter = document.getElementById('statusFilter').value;
 
-      // Debounce
-      if (searchTimeout) clearTimeout(searchTimeout);
+      let filteredClients = allClients.filter(client =>
+        (client.clientId && client.clientId.toLowerCase().includes(searchTerm)) ||
+        (client.clientName && client.clientName.toLowerCase().includes(searchTerm)) ||
+        (client.storeCode && client.storeCode.toLowerCase().includes(searchTerm)) ||
+        (client.phone && client.phone.includes(searchTerm)) ||
+        (client.email && client.email.toLowerCase().includes(searchTerm))
+      );
 
-      searchTimeout = setTimeout(() => {
-          currentSearchTerm = term;
-          loadClients(1); // Reset to page 1
-      }, 500);
+      if (statusFilter) {
+        filteredClients = filteredClients.filter(client => client.status === statusFilter);
+      }
+
+      displayClientsTable(filteredClients, 'clientsContent');
     }
 
     function filterClients() {
-      currentStatusFilter = document.getElementById('statusFilter').value;
-      loadClients(1);
+      searchClients();
     }
 
     function sendTestReminder() {
@@ -907,73 +956,63 @@
     }
 
     function loadDueClients() {
-      const container = document.getElementById('dueContent');
-      container.innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading due clients...</p>';
-      google.script.run.withSuccessHandler(function(clients) {
-        displayClientsTable(clients, 'dueContent');
-      }).getClientsNeedingFollowup();
+      google.script.run
+        .withSuccessHandler(function(clients) {
+          displayClientsTable(clients, 'dueContent');
+        })
+        .withFailureHandler(showGlobalError)
+        .getClientsNeedingFollowup();
     }
 
     function loadOverdueClients() {
-      const container = document.getElementById('overdueContent');
-      container.innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading overdue clients...</p>';
-      google.script.run.withSuccessHandler(function(clients) {
-        displayClientsTable(clients, 'overdueContent');
-      }).getOverdueClients();
+      const overdueClients = allClients.filter(client => client.overdueFollowUps > 0);
+      displayClientsTable(overdueClients, 'overdueContent');
     }
 
     function loadStatusView() {
       const statusCounts = {};
-      // We need to fetch status counts if we want to click through, or just use the dashboard stats cache?
-      // Re-fetching or using dashboard stats would be better than relying on allClients if allClients is paginated.
-      // Wait, the previous implementation relied on 'allClients' being FULL.
-      // Now 'allClients' is only the current page!
-      // This breaks 'loadStatusView' if it iterates 'allClients'.
+      allClients.forEach(client => {
+        const status = client.status || 'No Status';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
 
-      // FIX: use getDashboardStats to populate this view, as it has the counts.
-      document.getElementById('statusContent').innerHTML = '<p style="text-align:center; padding: 20px;"><i class="fas fa-spinner fa-spin"></i> Loading status...</p>';
+      let html = '<div style="display: flex; flex-wrap: wrap; gap: 20px;">';
 
-      google.script.run.withSuccessHandler(function(stats) {
-          const statusCounts = stats.statusCounts || {};
-          let html = '<div style="display: flex; flex-wrap: wrap; gap: 20px;">';
+      Object.entries(statusCounts).forEach(([status, count]) => {
+        const percentage = ((count / allClients.length) * 100).toFixed(1);
 
-          Object.entries(statusCounts).forEach(([status, count]) => {
-            const percentage = ((count / stats.totalClients) * 100).toFixed(1);
+        html += `
+          <div style="flex: 1; min-width: 200px; background: white; padding: 20px;
+                      border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <h3 style="margin: 0; color: #3498db;">${status}</h3>
+              <span style="font-size: 1.5rem; font-weight: bold;">${count}</span>
+            </div>
+            <div style="height: 10px; background: #f0f0f0; margin-top: 15px; border-radius: 5px;">
+              <div style="width: ${percentage}%; height: 100%; background: #3498db; border-radius: 5px;"></div>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+              <span style="font-size: 0.9rem; color: #666;">${percentage}%</span>
+              <button class="btn" onclick="viewClientsByStatus('${status}')"
+                      style="padding: 5px 10px; font-size: 0.8rem;">
+                View Clients
+              </button>
+            </div>
+          </div>
+        `;
+      });
 
-            html += `
-              <div style="flex: 1; min-width: 200px; background: white; padding: 20px;
-                          border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <h3 style="margin: 0; color: #3498db;">${status}</h3>
-                  <span style="font-size: 1.5rem; font-weight: bold;">${count}</span>
-                </div>
-                <div style="height: 10px; background: #f0f0f0; margin-top: 15px; border-radius: 5px;">
-                  <div style="width: ${percentage}%; height: 100%; background: #3498db; border-radius: 5px;"></div>
-                </div>
-                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
-                  <span style="font-size: 0.9rem; color: #666;">${percentage}%</span>
-                  <button class="btn" onclick="viewClientsByStatus('${status}')"
-                          style="padding: 5px 10px; font-size: 0.8rem;">
-                    View Clients
-                  </button>
-                </div>
-              </div>
-            `;
-          });
-
-          html += '</div>';
-          document.getElementById('statusContent').innerHTML = html;
-      }).getDashboardStats();
+      html += '</div>';
+      document.getElementById('statusContent').innerHTML = html;
     }
 
     function viewClientsByStatus(status) {
-      // Set the filter
-      document.getElementById('statusFilter').value = status;
-      currentStatusFilter = status;
+      const filteredClients = allClients.filter(client =>
+        (client.status || 'No Status') === status
+      );
 
-      // Switch tab and load
-      showTab('clients');
-      loadClients(1);
+      displayClientsTable(filteredClients, 'statusContent');
+      showTab('byStatus');
     }
 
     function loadHistory() {
