@@ -120,14 +120,7 @@ def run_verification():
         """
 
         page.add_init_script(mock_script)
-        page.on("console", lambda msg: print(f"PAGE LOG: {msg.text}"))
         page.goto(f"file://{html_file_path}")
-
-        # Manually trigger init() in case onload missed it
-        page.evaluate("if(window.init) window.init()")
-
-        # DEBUG: Screenshot
-        page.screenshot(path="debug_dashboard.png")
 
         # Wait for dashboard content
         # Note: #statsGrid is empty initially and filled by renderDashboard.
@@ -149,34 +142,47 @@ def run_verification():
             print(f"FAIL: Missing breakdown sections. Content: {content[:100]}...")
 
         # 2. Verify Table Data (Store A / PERKENALAN)
-        # We look for a cell with '1' under PERKENALAN row for STORE_A
-        # This is hard to robustly select with generic text, but we can check if "STORE_A" and "PERKENALAN" are visible
         if "STORE_A" in content and "PERKENALAN" in content:
              print("PASS: STORE_A and PERKENALAN labels visible in breakdown.")
 
-        # 3. Verify Filter Logic with Search
+        # 3. Verify Filter Logic
         # Switch to Clients Tab
         page.click("button[onclick=\"showTab('clients')\"]")
         page.wait_for_selector("#clientsContent table")
 
         print("Testing Filter...")
-        # Search for "STORE_A" (Store Code check) - Oh wait, store code isn't in my filter logic yet!
-        # The previous filter only checked Name, ID, Phone.
-        # User said "Search box still didn't work properly". Maybe they expect to search by Store Code or PIC?
-        # My filter logic: `name.includes(term) || id.includes(term) || phone.includes(term)`
-        # I should probably add PIC and Store Code to search.
 
+        # Test Case 1: Filter by PIC "Bob"
+        page.select_option("#picFilterClients", "Bob")
+        page.wait_for_timeout(100)
+        rows = page.locator("#clientsContent tbody tr").count()
+        if rows == 1:
+             print("PASS: Filter by PIC 'Bob' works.")
+        else:
+             print(f"FAIL: Filter by PIC 'Bob' failed. Rows: {rows}")
+
+        # Test Case 2: Filter by PIC with case sensitivity check (Mock "Bob", filter "BOB" if option allowed it, but options are populated from data)
+        # We can't easily test mismatched case unless we inject mismatched option.
+        # But we can verify "Dave"
+        page.select_option("#picFilterClients", "Dave")
+        page.wait_for_timeout(100)
+        rows = page.locator("#clientsContent tbody tr").count()
+        if rows == 1:
+             print("PASS: Filter by PIC 'Dave' works.")
+
+        page.select_option("#picFilterClients", "") # Reset
+
+        # Test Case 3: Search by Name "Alice"
         page.fill("#searchClients", "Alice")
         page.dispatch_event("#searchClients", "keyup")
         page.wait_for_timeout(100)
-
         rows = page.locator("#clientsContent tbody tr").count()
         if rows == 1:
              print("PASS: Filter by Name 'Alice' works.")
         else:
              print(f"FAIL: Filter by Name 'Alice' failed. Rows: {rows}")
 
-        # Test Empty Search
+        # Test Case 4: Empty Search
         page.fill("#searchClients", "")
         page.dispatch_event("#searchClients", "keyup")
         page.wait_for_timeout(100)

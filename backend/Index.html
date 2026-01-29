@@ -590,18 +590,22 @@
        const progressInput = document.getElementById('progressFilter' + capitalize(context));
 
        const term = (searchInput ? searchInput.value : '').trim().toLowerCase();
-       const pic = picInput ? picInput.value : '';
-       const progress = progressInput ? progressInput.value : '';
+       const pic = (picInput ? picInput.value : '').trim();
+       const progress = (progressInput ? progressInput.value : '').trim();
 
        const filtered = sourceData.filter(c => {
           // Safe search: ensure properties exist before toLowerCase
-          const name = (c.clientName || '').toLowerCase();
-          const id = (c.clientId || '').toLowerCase();
-          const phone = (c.phone || '').toString();
+          const name = (c.clientName || '').toString().toLowerCase();
+          const id = (c.clientId || '').toString().toLowerCase();
+          const phone = (c.phone || '').toString().toLowerCase();
+          const cPic = (c.pic || '').toString();
+          const cProgress = (c.progress || '').toString();
 
           const matchesTerm = !term || name.includes(term) || id.includes(term) || phone.includes(term);
-          const matchesPic = !pic || c.pic === pic;
-          const matchesProgress = !progress || c.progress === progress;
+
+          // Case-insensitive exact match for filters
+          const matchesPic = !pic || cPic.toLowerCase() === pic.toLowerCase();
+          const matchesProgress = !progress || cProgress.toLowerCase() === progress.toLowerCase();
 
           return matchesTerm && matchesPic && matchesProgress;
        });
