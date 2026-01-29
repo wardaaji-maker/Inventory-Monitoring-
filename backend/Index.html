@@ -487,6 +487,48 @@
          });
          html += '</tbody></table></div>';
 
+         // 2. Progress Breakdown
+         const allProgress = new Set();
+         keys.forEach(k => {
+             if(data[k].progress) Object.keys(data[k].progress).forEach(p => allProgress.add(p));
+         });
+         const progCols = Array.from(allProgress).sort();
+
+         html += '<h4 style="margin-top:20px;">Progress Breakdown</h4><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Entity</th>';
+         progCols.forEach(p => html += `<th>${p}</th>`);
+         html += '</tr></thead><tbody>';
+
+         keys.forEach(k => {
+            html += `<tr><td><strong>${k}</strong></td>`;
+            progCols.forEach(p => {
+               const val = (data[k].progress && data[k].progress[p]) || 0;
+               html += `<td>${val}</td>`;
+            });
+            html += '</tr>';
+         });
+         html += '</tbody></table></div>';
+
+         // 3. Feedback Breakdown
+         const allFeedback = new Set();
+         keys.forEach(k => {
+             if(data[k].feedback) Object.keys(data[k].feedback).forEach(f => allFeedback.add(f));
+         });
+         const feedCols = Array.from(allFeedback).sort();
+
+         html += '<h4 style="margin-top:20px;">Feedback Breakdown</h4><div style="overflow-x:auto;"><table class="data-table"><thead><tr><th>Entity</th>';
+         feedCols.forEach(f => html += `<th>${f}</th>`);
+         html += '</tr></thead><tbody>';
+
+         keys.forEach(k => {
+            html += `<tr><td><strong>${k}</strong></td>`;
+            feedCols.forEach(f => {
+               const val = (data[k].feedback && data[k].feedback[f]) || 0;
+               html += `<td>${val}</td>`;
+            });
+            html += '</tr>';
+         });
+         html += '</tbody></table></div>';
+
          document.getElementById('breakdownContent').innerHTML = html;
     }
 
@@ -543,9 +585,13 @@
        else if (context === 'due') sourceData = dataStore.due;
        else if (context === 'overdue') sourceData = dataStore.overdue;
 
-       const term = (document.getElementById('search' + capitalize(context)).value || '').toLowerCase();
-       const pic = document.getElementById('picFilter' + capitalize(context)).value;
-       const progress = document.getElementById('progressFilter' + capitalize(context)).value;
+       const searchInput = document.getElementById('search' + capitalize(context));
+       const picInput = document.getElementById('picFilter' + capitalize(context));
+       const progressInput = document.getElementById('progressFilter' + capitalize(context));
+
+       const term = (searchInput ? searchInput.value : '').trim().toLowerCase();
+       const pic = picInput ? picInput.value : '';
+       const progress = progressInput ? progressInput.value : '';
 
        const filtered = sourceData.filter(c => {
           // Safe search: ensure properties exist before toLowerCase
@@ -553,7 +599,7 @@
           const id = (c.clientId || '').toLowerCase();
           const phone = (c.phone || '').toString();
 
-          const matchesTerm = name.includes(term) || id.includes(term) || phone.includes(term);
+          const matchesTerm = !term || name.includes(term) || id.includes(term) || phone.includes(term);
           const matchesPic = !pic || c.pic === pic;
           const matchesProgress = !progress || c.progress === progress;
 
