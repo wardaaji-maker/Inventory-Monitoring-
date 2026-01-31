@@ -300,8 +300,19 @@
       overdue: new Set()
     };
 
+    // UI State for Persistence
+    let appState = {
+      currentTab: 'dashboard',
+      filters: {
+        clients: { search: '', pic: '', progress: '' },
+        due: { search: '', pic: '', progress: '' },
+        overdue: { search: '', pic: '', progress: '' }
+      }
+    };
+
     function init() {
       document.getElementById('followupDate').valueAsDate = new Date();
+      restoreState(); // Load saved state
       loadDashboard();
       loadClients();
 
@@ -333,8 +344,7 @@
           populatePicFilter('picFilterDue', pics);
           populatePicFilter('picFilterOverdue', pics);
 
-          // Calculate Due/Overdue locally to ensure consistency
-          // (Or fetch from server if preferred, but local is faster if we have allClients)
+          // Calculate Due/Overdue locally
           const today = new Date();
           today.setHours(0,0,0,0);
 
@@ -347,12 +357,20 @@
 
           dataStore.overdue = clients.filter(c => c.overdueFollowUps > 0);
 
-          renderTable(dataStore.clients, 'clientsContent', 'clients');
-          renderTable(dataStore.due, 'dueContent', 'due');
-          renderTable(dataStore.overdue, 'overdueContent', 'overdue');
+          // Restore input values from state FIRST so refreshView reads correct values
+          applyFiltersToDOM();
+
+          // Apply saved filters logic
+          refreshView('clients');
+          refreshView('due');
+          refreshView('overdue');
         })
         .withFailureHandler(showError)
         .getAllClients();
+    }
+
+    function refreshView(context) {
+       filterList(context);
     }
 
     function populatePicFilter(id, pics) {
@@ -626,7 +644,6 @@
     // --- Filtering ---
 
     function filterList(context) {
-       // context is 'clients', 'due', or 'overdue'
        let sourceData = [];
        if (context === 'clients') sourceData = dataStore.clients;
        else if (context === 'due') sourceData = dataStore.due;
@@ -636,12 +653,17 @@
        const picInput = document.getElementById('picFilter' + capitalize(context));
        const progressInput = document.getElementById('progressFilter' + capitalize(context));
 
-       const term = (searchInput ? searchInput.value : '').trim().toLowerCase();
+       // Get raw value for state saving to preserve case in input
+       const rawTerm = (searchInput ? searchInput.value : '').trim();
+       const term = rawTerm.toLowerCase();
        const pic = (picInput ? picInput.value : '').trim();
        const progress = (progressInput ? progressInput.value : '').trim();
 
+       // Update State (Save raw term)
+       appState.filters[context] = { search: rawTerm, pic: pic, progress: progress };
+       saveState();
+
        const filtered = sourceData.filter(c => {
-          // Safe search: ensure properties exist before toLowerCase
           const name = (c.clientName || '').toString().toLowerCase();
           const id = (c.clientId || '').toString().toLowerCase();
           const phone = (c.phone || '').toString().toLowerCase();
@@ -649,8 +671,6 @@
           const cProgress = (c.progress || '').toString();
 
           const matchesTerm = !term || name.includes(term) || id.includes(term) || phone.includes(term);
-
-          // Case-insensitive exact match for filters
           const matchesPic = !pic || cPic.toLowerCase() === pic.toLowerCase();
           const matchesProgress = !progress || cProgress.toLowerCase() === progress.toLowerCase();
 
@@ -853,12 +873,54 @@
       document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
 
       document.getElementById(id+'Tab').classList.add('active');
-      // Update sidebar button state (simple iteration)
+      // Update sidebar button state
       const btns = document.querySelectorAll('.sidebar button');
+      // Reset all
+      btns.forEach(b => b.classList.remove('active'));
+
+      // Set active based on ID
       if (id === 'dashboard') btns[0].classList.add('active');
       else if (id === 'clients') btns[1].classList.add('active');
       else if (id === 'due') btns[2].classList.add('active');
       else if (id === 'overdue') btns[3].classList.add('active');
+
+      appState.currentTab = id;
+      saveState();
+    }
+
+    // Persistence Logic
+    function saveState() {
+       localStorage.setItem('leadAppState', JSON.stringify(appState));
+    }
+
+    function restoreState() {
+       const saved = localStorage.getItem('leadAppState');
+       if (saved) {
+          try {
+             appState = JSON.parse(saved);
+             // Restore Tab
+             showTab(appState.currentTab || 'dashboard');
+          } catch(e) { console.error('State restore failed', e); }
+       }
+    }
+
+    function applyFiltersToDOM() {
+       // Restore inputs from state for each context
+       ['clients', 'due', 'overdue'].forEach(ctx => {
+          const f = appState.filters[ctx];
+          if (f) {
+             const s = document.getElementById('search' + capitalize(ctx));
+             const p = document.getElementById('picFilter' + capitalize(ctx));
+             const pr = document.getElementById('progressFilter' + capitalize(ctx));
+
+             if(s && f.search) s.value = f.search;
+             if(p && f.pic) p.value = f.pic;
+             if(pr && f.progress) pr.value = f.progress;
+
+             // Re-run filter if we set values
+             if (f.search || f.pic || f.progress) filterList(ctx);
+          }
+       });
     }
 
     function closeModal(id) {
