@@ -322,6 +322,9 @@ function recordFollowup(clientRow, followupData) {
     sendFollowupNotification(clientRow, followupData);
   }
 
+  // Ensure changes are committed before returning so subsequent reads see the update
+  SpreadsheetApp.flush();
+
   return { success: true };
 }
 
