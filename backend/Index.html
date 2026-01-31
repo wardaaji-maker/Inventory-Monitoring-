@@ -711,10 +711,16 @@
        if (!client || !client.phone) return;
 
        const phone = normalizePhone(client.phone);
-       // Use the template from the current context? Or just blank.
-       // Let's generic modal prompt or just open.
+       // Default template logic if no specific context template is selected (or reuse one)
+       // For single click, we assume a generic greeting
        const msg = encodeURIComponent(`Hello ${client.clientName}, `);
        window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+
+       // Immediately open follow-up modal
+       // We pre-fill Type: Message (WA) and Date: Today
+       openFollowup(row);
+       document.getElementById('followupType').value = 'Message';
+       document.getElementById('followupDate').valueAsDate = new Date();
     }
 
     function openWaModal(context) {
@@ -752,7 +758,10 @@
                  <strong>${client.clientName}</strong><br>
                  <small>${client.phone}</small>
                </div>
-               <a href="${url}" target="_blank" class="btn btn-success" onclick="this.style.background='#ccc'; this.innerText='Sent'">Send</a>
+               <a href="${url}" target="_blank" class="btn btn-success"
+                  onclick="this.style.background='#ccc'; this.innerText='Sent'; openFollowup(${client.row}); document.getElementById('followupType').value='Message'; document.getElementById('followupDate').valueAsDate = new Date();">
+                  Send
+               </a>
              `;
              list.appendChild(div);
           }
