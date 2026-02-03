@@ -959,13 +959,16 @@ function recordFollowUp(leadId, followUpData) {
         data[i][followUpCountColIndex] = currentFollowUpCount;
 
         // Calculate and update NextFollowUp date
-        data[i][nextFollowUpColIndex] = calculateNextFollowUp(new Date(), currentFollowUpCount);
+        const nextDate = calculateNextFollowUp(new Date(), currentFollowUpCount);
+        data[i][nextFollowUpColIndex] = nextDate;
+        Logger.log(`Lead ${leadId}: Incrementing follow-up count to ${currentFollowUpCount}. Next follow-up set to ${nextDate}`);
 
         // Update LastContact
         data[i][lastContactColIndex] = new Date();
 
         // Write the updated row back to the sheet
         leadsSheet.getRange(i + 1, 1, 1, data[i].length).setValues([data[i]]);
+        SpreadsheetApp.flush(); // Force write to sheet
         break;
       }
     }
@@ -1072,13 +1075,16 @@ function markAsContacted(leadId, contactType, notes) {
         data[i][followUpCountColIndex] = currentFollowUpCount;
 
         // Calculate and update NextFollowUp date
-        data[i][nextFollowUpColIndex] = calculateNextFollowUp(new Date(), currentFollowUpCount);
+        const nextDate = calculateNextFollowUp(new Date(), currentFollowUpCount);
+        data[i][nextFollowUpColIndex] = nextDate;
+        Logger.log(`Lead ${leadId}: Marked contacted. Count ${currentFollowUpCount}. Next follow-up: ${nextDate}`);
 
         // Update LastContact
         data[i][lastContactColIndex] = new Date();
 
         // Write the updated row back to the sheet
         leadsSheet.getRange(i + 1, 1, 1, data[i].length).setValues([data[i]]);
+        SpreadsheetApp.flush(); // Force write to sheet
         break;
       }
     }
