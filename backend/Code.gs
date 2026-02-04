@@ -20,7 +20,7 @@ const COLUMNS = {
   CREATED_AT: 7,   // H
   PIC: 8,          // I
   STATUS: 9,       // J
-  PROGRESS: 10,    // K
+  CONTENT: 10,     // K (Renamed from PROGRESS)
   FOLLOW_UP_START: 11 // L
 };
 
@@ -49,7 +49,7 @@ function checkAndRepairHeaders() {
     // Define expected headers
     const headers = [
       'No', 'Client ID', 'Client Name', 'Store Code', 'Phone Number', 'Email',
-      'Address', 'Created At', 'PIC', 'Status', 'Progress'
+      'Address', 'Created At', 'PIC', 'Status', 'Content'
     ];
 
     // Add follow up headers dynamically (Date and Feedback pairs)
@@ -83,17 +83,27 @@ function checkAndRepairHeaders() {
       Logger.log('Headers repaired.');
     }
 
+    // Check/Create Settings Sheet
+    let settingsSheet = ss.getSheetByName('Settings');
+    if (!settingsSheet) {
+      settingsSheet = ss.insertSheet('Settings');
+      settingsSheet.getRange('A1').setValue('Promotion Types');
+      // Default promotions
+      settingsSheet.getRange('A2:A4').setValues([['Monthly Sale'], ['New Arrival'], ['Special Offer']]);
+    }
+
     // Apply Data Validation
     const maxRows = sheet.getMaxRows();
     if (maxRows > 1) {
       const numRows = maxRows - 1;
 
-      // Progress Validation
-      const progressRule = SpreadsheetApp.newDataValidation()
-        .requireValueInList(['PERKENALAN', 'PENDEKATAN', 'TERHUBUNG'], true)
+      // Content (Promotion) Validation from Settings
+      const lastSettingRow = Math.max(settingsSheet.getLastRow(), 2);
+      const contentRule = SpreadsheetApp.newDataValidation()
+        .requireValueInRange(settingsSheet.getRange(`Settings!A2:A${lastSettingRow}`), true)
         .setAllowInvalid(false)
         .build();
-      sheet.getRange(2, COLUMNS.PROGRESS + 1, numRows, 1).setDataValidation(progressRule);
+      sheet.getRange(2, COLUMNS.CONTENT + 1, numRows, 1).setDataValidation(contentRule);
 
       // Feedback Validation
       const feedbackRule = SpreadsheetApp.newDataValidation()
@@ -122,6 +132,19 @@ function checkAndRepairHeaders() {
 
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+// Get Promotion Types
+function getPromotionTypes() {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const settingsSheet = ss.getSheetByName('Settings');
+  if (!settingsSheet) return [];
+
+  const lastRow = settingsSheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const data = settingsSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+  return data.map(r => r[0]).filter(p => p);
 }
 
 // Get all clients with enhanced data
@@ -180,10 +203,18 @@ function getAllClients() {
       let nextFollowUp = null;
       let overdueFollowUps = 0;
 
-      // If progress is "TERHUBUNG", stop follow up
-      const progress = row[COLUMNS.PROGRESS];
+      // If content implies stop? Actually, requirement "delete progress stages".
+      // We no longer have "TERHUBUNG" logic unless defined in Content?
+      // User said "replace progress... with content... promotion types".
+      // Assuming no automatic stop logic based on promotion type unless specified.
+      // But we should keep the status logic if needed.
+      // For now, removing "TERHUBUNG" check as Progress column is gone.
+      // Or we can map 'Status' column?
+      // Let's assume standard calculation applies.
 
-      if (progress !== 'TERHUBUNG') {
+      const content = row[COLUMNS.CONTENT];
+
+      if (true) { // Always calculate next follow up for now
          if (latestFollowUpDate) {
             // Rule: Next follow up is 4 days after previous follow up
             nextFollowUp = new Date(latestFollowUpDate);
@@ -228,7 +259,7 @@ function getAllClients() {
         createdAt: safeCreatedAt,
         pic: row[COLUMNS.PIC],
         status: row[COLUMNS.STATUS],
-        progress: progress,
+        content: content, // Renamed from progress
         followUps: safeFollowUps, // New structure
         nextFollowUp: safeNextFollowUp,
         overdueFollowUps: overdueFollowUps,
@@ -300,9 +331,9 @@ function recordFollowup(clientRow, followupData) {
   // Update Status -> "LEADS" (Fixed)
   sheet.getRange(clientRow, COLUMNS.STATUS + 1).setValue("LEADS");
 
-  // Update Progress
-  if (followupData.progress) {
-    sheet.getRange(clientRow, COLUMNS.PROGRESS + 1).setValue(followupData.progress);
+  // Update Content (Promotion)
+  if (followupData.content) {
+    sheet.getRange(clientRow, COLUMNS.CONTENT + 1).setValue(followupData.content);
   }
 
   // Log activity
@@ -314,7 +345,7 @@ function recordFollowup(clientRow, followupData) {
     notes: followupData.notes, // Feedback
     pic: Session.getActiveUser().getEmail(),
     status: "LEADS",
-    progress: followupData.progress
+    content: followupData.content
   });
 
   // Send email
@@ -337,7 +368,7 @@ function logFollowupActivity(activity) {
     logSheet = ss.insertSheet('Follow-up Log');
     logSheet.getRange(1, 1, 1, 8).setValues([[
       'Timestamp', 'Client ID', 'Client Name', 'Follow-up Date',
-      'Type', 'Feedback', 'PIC', 'Status', 'Progress'
+      'Type', 'Feedback', 'PIC', 'Status', 'Content'
     ]]);
   }
 
@@ -351,7 +382,7 @@ function logFollowupActivity(activity) {
     activity.notes,
     activity.pic,
     activity.status,
-    activity.progress
+    activity.content
   ]);
 }
 
@@ -372,7 +403,7 @@ function sendFollowupNotification(clientRow, followupData) {
     <p><strong>Client:</strong> ${clientData.name}</p>
     <p><strong>Date:</strong> ${formatDate(followupData.date)}</p>
     <p><strong>Feedback:</strong> ${followupData.notes}</p>
-    <p><strong>Progress:</strong> ${followupData.progress}</p>
+    <p><strong>Content:</strong> ${followupData.content}</p>
     <p><strong>Status:</strong> LEADS</p>
   `;
 
@@ -397,11 +428,11 @@ function getDashboardStats() {
   const followUpPercentage = clients.length > 0 ?
     ((clientsWithFollowUps / clients.length) * 100).toFixed(1) : 0;
 
-  // Progress Counts
-  const progressCounts = {};
+  // Content Counts
+  const contentCounts = {};
   clients.forEach(client => {
-    const prog = client.progress || 'No Progress';
-    progressCounts[prog] = (progressCounts[prog] || 0) + 1;
+    const c = client.content || 'No Content';
+    contentCounts[c] = (contentCounts[c] || 0) + 1;
   });
 
   // Feedback Counts
@@ -425,7 +456,7 @@ function getDashboardStats() {
            followedUp: 0,
            dueToday: 0,
            overdue: 0,
-           progress: {},
+           content: {},
            feedback: {}
         };
       }
@@ -447,9 +478,9 @@ function getDashboardStats() {
          }
       }
 
-      // Progress
-      const p = client.progress || 'No Progress';
-      g.progress[p] = (g.progress[p] || 0) + 1;
+      // Content
+      const c = client.content || 'No Content';
+      g.content[c] = (g.content[c] || 0) + 1;
 
       // Feedback
       const f = client.latestFeedback || 'No Feedback';
@@ -471,7 +502,7 @@ function getDashboardStats() {
     avgFollowUps: clients.length > 0 ?
       (clients.reduce((sum, client) => sum + client.totalFollowUps, 0) / clients.length).toFixed(1) : 0,
     followUpPercentage: followUpPercentage,
-    progressCounts: progressCounts,
+    contentCounts: contentCounts,
     feedbackCounts: feedbackCounts,
     storeStats: aggregate(c => c.storeCode),
     picStats: aggregate(c => c.pic)
@@ -552,7 +583,7 @@ function exportClientData(format = 'csv') {
   if (format === 'csv') {
     const headers = [
       'Client ID', 'Client Name', 'Store Code', 'Phone', 'Email',
-      'Status', 'Progress', 'PIC', 'Next Follow-up', 'Latest Feedback'
+      'Status', 'Content', 'PIC', 'Next Follow-up', 'Latest Feedback'
     ];
 
     const csvData = clients.map(client => [
@@ -562,7 +593,7 @@ function exportClientData(format = 'csv') {
       client.phone,
       client.email,
       client.status,
-      client.progress,
+      client.content,
       client.pic,
       formatDate(client.nextFollowUp),
       `"${client.latestFeedback}"`

@@ -566,7 +566,7 @@
       // Desktop Table
       let html = `<table class="data-table"><thead><tr>
         <th width="30"><input type="checkbox" onchange="toggleSelectAll('${context}', this)" id="selectAll_${context}"></th>
-        <th>ID</th><th>Name</th><th>Store</th><th>PIC</th><th>Phone</th><th>Status</th><th>Progress</th><th>Follow-ups</th><th>Next Follow-up</th><th>Actions</th>
+        <th>ID</th><th>Name</th><th>Store</th><th>PIC</th><th>Phone</th><th>Status</th><th>Content</th><th>Follow-ups</th><th>Next Follow-up</th><th>Actions</th>
       </tr></thead><tbody>`;
 
       // Mobile Card View
@@ -589,7 +589,7 @@
           <td>${c.pic || '-'}</td>
           <td>${c.phone ? '<a href="https://wa.me/' + normalizePhone(c.phone) + '" target="_blank">' + c.phone + '</a>' : '-'}</td>
           <td><span class="status-badge">${c.status}</span></td>
-          <td>${c.progress || '-'}</td>
+          <td>${c.content || '-'}</td>
           <td style="text-align:center;"><span style="background:#e8f4fc; padding:2px 8px; border-radius:10px; font-size:0.9em;">${c.totalFollowUps || 0}</span></td>
           <td style="${urgent}">${next}</td>
           <td>
@@ -612,7 +612,7 @@
             <div class="mobile-card-body">
               <p><i class="fas fa-store"></i> ${c.storeCode || '-'} | <i class="fas fa-user"></i> ${c.pic || '-'}</p>
               <p><i class="fas fa-phone"></i> ${c.phone || '-'}</p>
-              <p><strong>Status:</strong> <span class="status-badge">${c.status}</span> (${c.progress || '-'})</p>
+              <p><strong>Status:</strong> <span class="status-badge">${c.status}</span> (${c.content || '-'})</p>
               <p><strong>Next:</strong> <span style="${urgent}">${next}</span></p>
             </div>
             <div class="mobile-card-actions">
