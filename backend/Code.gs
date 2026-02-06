@@ -27,7 +27,7 @@ const COLUMNS = {
 
 // Main web app
 function doGet() {
-  // Inspect and repair headers on load
+  // Inspect headers on load but DO NOT clear data
   checkAndRepairHeaders();
 
   return HtmlService.createTemplateFromFile('Index')
@@ -51,47 +51,6 @@ function checkAndRepairHeaders() {
       sheet = ss.insertSheet(CONFIG.SHEET_NAME);
     }
 
-    // Check if sheet has data
-    const lastCol = sheet.getLastColumn();
-    if (lastCol > 0) {
-      const currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
-
-      // Heuristic: If "Progress" is at Column K (Index 10) OR "Follow Up date 1" is at Column L (Index 11)
-      // This indicates the old structure (packed dates starting at L, Progress at K)
-      const isOldStructure = (currentHeaders.length > 10 && (currentHeaders[10] === 'Progress' || currentHeaders[10] === 'J')) ||
-                             (currentHeaders.length > 11 && (currentHeaders[11] === 'Follow Up date 1' || currentHeaders[11] === 'Follow Up Date 1'));
-
-      if (isOldStructure) {
-        Logger.log('Detected Old Structure. Migrating Data...');
-        migrateData(sheet);
-        return; // Migration handles header setting
-      }
-    }
-
-    // Standard Repair Logic (just overwrites headers if needed)
-    const headers = generateHeaders();
-    const requiredCols = headers.length;
-
-    if (sheet.getMaxColumns() < requiredCols) {
-      sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
-    }
-
-    const range = sheet.getRange(1, 1, 1, requiredCols);
-    const currentHeaders = range.getValues()[0];
-
-    let needsRepair = false;
-    for (let i = 0; i < headers.length; i++) {
-      if (currentHeaders[i] !== headers[i]) {
-        needsRepair = true;
-        break;
-      }
-    }
-
-    if (needsRepair) {
-      range.setValues([headers]);
-      Logger.log('Headers repaired');
-    }
-
     // Check for Settings sheet
     let settingsSheet = ss.getSheetByName('Settings');
     if (!settingsSheet) {
@@ -100,6 +59,31 @@ function checkAndRepairHeaders() {
       settingsSheet.getRange('A2').setValue('Monthly Sale');
       settingsSheet.getRange('A3').setValue('New Arrival');
       settingsSheet.getRange('A4').setValue('Special Offer');
+    }
+
+    // Standard Repair Logic (just appends headers if needed)
+    const headers = generateHeaders();
+    const requiredCols = headers.length;
+
+    if (sheet.getMaxColumns() < requiredCols) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
+    }
+
+    // Only set headers if sheet is empty or row 1 is empty
+    const lastRow = sheet.getLastRow();
+    if (lastRow === 0) {
+       sheet.getRange(1, 1, 1, requiredCols).setValues([headers]);
+       return;
+    }
+
+    // Check existing headers but DO NOT OVERWRITE DATA
+    const currentHeaders = sheet.getRange(1, 1, 1, requiredCols).getValues()[0];
+    let needsRepair = false;
+    for (let i = 0; i < headers.length; i++) {
+      if (currentHeaders[i] !== headers[i]) {
+        // If header mismatch, log it but don't overwrite user data
+        Logger.log(`Header mismatch at index ${i}: Expected ${headers[i]}, Found ${currentHeaders[i]}`);
+      }
     }
 
   } catch (e) {
@@ -122,76 +106,8 @@ function generateHeaders() {
   return headers;
 }
 
-function migrateData(sheet) {
-   const lastRow = sheet.getLastRow();
-   if (lastRow <= 1) { // Only headers
-      const newHeaders = generateHeaders();
-      const requiredCols = newHeaders.length;
-      if (sheet.getMaxColumns() < requiredCols) {
-         sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
-      }
-      sheet.getRange(1, 1, 1, requiredCols).setValues([newHeaders]);
-      return;
-   }
-
-   const lastCol = sheet.getLastColumn();
-   // Read all data (including headers to be safe with indices, but we skip row 1)
-   const oldData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
-
-   // Transform Data
-   const newData = oldData.map(row => {
-      // Static cols 0-9 (A-J). Note: Old K(10) was Progress, discard it.
-      const newRow = [];
-      for(let i=0; i<=9; i++) {
-          newRow[i] = (row[i] !== undefined) ? row[i] : '';
-      }
-
-      // Old Dates started at L(11) (Index 11)
-      // New Dates start at K(10) with stride 3
-      let oldDateIdx = 11;
-      let newTripletIdx = 10;
-
-      // Process packed dates
-      while(oldDateIdx < row.length) {
-         const dateVal = row[oldDateIdx];
-         if (dateVal) {
-            newRow[newTripletIdx] = dateVal; // Date
-            newRow[newTripletIdx + 1] = '';  // Feedback (Empty)
-            newRow[newTripletIdx + 2] = '';  // Content (Empty)
-         }
-         oldDateIdx++; // Move to next packed date
-         newTripletIdx += 3; // Move to next triplet
-      }
-      return newRow;
-   });
-
-   // Clear old data
-   sheet.clearContents();
-
-   // Set New Headers
-   const newHeaders = generateHeaders();
-   const requiredCols = newHeaders.length;
-
-   if (sheet.getMaxColumns() < requiredCols) {
-     sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
-   }
-
-   sheet.getRange(1, 1, 1, requiredCols).setValues([newHeaders]);
-
-   // Write Data
-   if (newData.length > 0) {
-     const maxLen = Math.max(...newData.map(r => r.length));
-     const normalizedData = newData.map(r => {
-        while(r.length < maxLen) r.push('');
-        return r;
-     });
-
-     sheet.getRange(2, 1, normalizedData.length, maxLen).setValues(normalizedData);
-   }
-
-   SpreadsheetApp.flush();
-   Logger.log('Migration Completed.');
-}
+// MIGRATION DISABLED TO PREVENT DATA LOSS
+// function migrateData(sheet) { ... }
 
 // Get Promotion Types from Settings
 function getPromotionTypes() {
@@ -218,89 +134,95 @@ function getAllClients() {
   // Ensure we don't read beyond existing columns if sheet is small (though checkHeaders should fix it)
   const actualCols = Math.min(totalCols, sheet.getLastColumn());
 
-  const data = sheet.getRange(2, 1, lastRow-1, actualCols).getValues();
+  // Use try-catch for data reading
+  try {
+      const data = sheet.getRange(2, 1, lastRow-1, actualCols).getValues();
 
-  const clients = data.map((row, index) => {
-    // Collect all follow-up dates, feedback, and content
-    const followUps = [];
-    let latestFollowUpDate = null;
-    let latestFeedback = '';
-    let latestContent = '';
+      const clients = data.map((row, index) => {
+        // Collect all follow-up dates, feedback, and content
+        const followUps = [];
+        let latestFollowUpDate = null;
+        let latestFeedback = '';
+        let latestContent = '';
 
-    for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
-      const dateColIdx = COLUMNS.FOLLOW_UP_START + (i * 3);
-      const feedbackColIdx = dateColIdx + 1;
-      const contentColIdx = dateColIdx + 2;
+        for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
+          const dateColIdx = COLUMNS.FOLLOW_UP_START + (i * 3);
+          const feedbackColIdx = dateColIdx + 1;
+          const contentColIdx = dateColIdx + 2;
 
-      // Safety check for indices
-      if (dateColIdx >= row.length) break;
+          // Safety check for indices
+          if (dateColIdx >= row.length) break;
 
-      const dateVal = row[dateColIdx];
-      const feedbackVal = (feedbackColIdx < row.length) ? row[feedbackColIdx] : '';
-      const contentVal = (contentColIdx < row.length) ? row[contentColIdx] : '';
+          const dateVal = row[dateColIdx];
+          const feedbackVal = (feedbackColIdx < row.length) ? row[feedbackColIdx] : '';
+          const contentVal = (contentColIdx < row.length) ? row[contentColIdx] : '';
 
-      if (dateVal && dateVal instanceof Date) {
-        followUps.push({
-          date: dateVal,
-          feedback: feedbackVal || '',
-          content: contentVal || ''
-        });
+          if (dateVal && dateVal instanceof Date) {
+            followUps.push({
+              date: dateVal,
+              feedback: feedbackVal || '',
+              content: contentVal || ''
+            });
 
-        if (!latestFollowUpDate || dateVal > latestFollowUpDate) {
-          latestFollowUpDate = dateVal;
-          latestFeedback = feedbackVal || '';
-          latestContent = contentVal || '';
+            if (!latestFollowUpDate || dateVal > latestFollowUpDate) {
+              latestFollowUpDate = dateVal;
+              latestFeedback = feedbackVal || '';
+              latestContent = contentVal || '';
+            }
+          }
         }
-      }
-    }
 
-    // Find next follow-up date logic
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+        // Find next follow-up date logic
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-    let nextFollowUp = null;
-    let overdueFollowUps = 0;
+        let nextFollowUp = null;
+        let overdueFollowUps = 0;
 
-    if (latestContent === 'TERHUBUNG') {
-        nextFollowUp = null;
-    } else {
-        if (latestFollowUpDate) {
-             nextFollowUp = new Date(latestFollowUpDate);
-             nextFollowUp.setDate(nextFollowUp.getDate() + 4);
-             nextFollowUp.setHours(0,0,0,0);
-        } else if (row[COLUMNS.CREATED_AT] instanceof Date) {
-             nextFollowUp = new Date(row[COLUMNS.CREATED_AT]);
-             nextFollowUp.setDate(nextFollowUp.getDate() + 4);
-             nextFollowUp.setHours(0,0,0,0);
+        if (latestContent === 'TERHUBUNG') {
+            nextFollowUp = null;
+        } else {
+            if (latestFollowUpDate) {
+                 nextFollowUp = new Date(latestFollowUpDate);
+                 nextFollowUp.setDate(nextFollowUp.getDate() + 4);
+                 nextFollowUp.setHours(0,0,0,0);
+            } else if (row[COLUMNS.CREATED_AT] instanceof Date) {
+                 nextFollowUp = new Date(row[COLUMNS.CREATED_AT]);
+                 nextFollowUp.setDate(nextFollowUp.getDate() + 4);
+                 nextFollowUp.setHours(0,0,0,0);
+            }
         }
-    }
 
-    if (nextFollowUp && nextFollowUp < today) {
-         overdueFollowUps = 1;
-    }
+        if (nextFollowUp && nextFollowUp < today) {
+             overdueFollowUps = 1;
+        }
 
-    return {
-      row: index + 2,
-      no: row[COLUMNS.NO],
-      clientId: row[COLUMNS.CLIENT_ID],
-      clientName: row[COLUMNS.CLIENT_NAME],
-      storeCode: row[COLUMNS.STORE_CODE],
-      phone: row[COLUMNS.PHONE],
-      email: row[COLUMNS.EMAIL],
-      address: row[COLUMNS.ADDRESS],
-      createdAt: row[COLUMNS.CREATED_AT],
-      pic: row[COLUMNS.PIC],
-      status: row[COLUMNS.STATUS],
-      content: latestContent, // Derived from latest follow-up
-      followUps: followUps,
-      latestFeedback: latestFeedback,
-      nextFollowUp: nextFollowUp,
-      overdueFollowUps: overdueFollowUps,
-      totalFollowUps: followUps.length
-    };
-  }).filter(client => client.clientId);
+        return {
+          row: index + 2,
+          no: (row.length > COLUMNS.NO) ? row[COLUMNS.NO] : '',
+          clientId: (row.length > COLUMNS.CLIENT_ID) ? row[COLUMNS.CLIENT_ID] : '',
+          clientName: (row.length > COLUMNS.CLIENT_NAME) ? row[COLUMNS.CLIENT_NAME] : '',
+          storeCode: (row.length > COLUMNS.STORE_CODE) ? row[COLUMNS.STORE_CODE] : '',
+          phone: (row.length > COLUMNS.PHONE) ? row[COLUMNS.PHONE] : '',
+          email: (row.length > COLUMNS.EMAIL) ? row[COLUMNS.EMAIL] : '',
+          address: (row.length > COLUMNS.ADDRESS) ? row[COLUMNS.ADDRESS] : '',
+          createdAt: (row.length > COLUMNS.CREATED_AT) ? row[COLUMNS.CREATED_AT] : '',
+          pic: (row.length > COLUMNS.PIC) ? row[COLUMNS.PIC] : '',
+          status: (row.length > COLUMNS.STATUS) ? row[COLUMNS.STATUS] : '',
+          content: latestContent,
+          followUps: followUps,
+          latestFeedback: latestFeedback,
+          nextFollowUp: nextFollowUp,
+          overdueFollowUps: overdueFollowUps,
+          totalFollowUps: followUps.length
+        };
+      }).filter(client => client.clientId);
 
-  return clients;
+      return clients;
+  } catch (e) {
+      Logger.log("Error reading clients: " + e.toString());
+      return [];
+  }
 }
 
 // Get clients needing follow-up today
@@ -328,6 +250,11 @@ function saveFollowupInternal(sheet, clientRow, followupData) {
 
   for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
     const colIdx = COLUMNS.FOLLOW_UP_START + (i * 3);
+    // Ensure column exists
+    if (colIdx + 3 > sheet.getMaxColumns()) {
+       sheet.insertColumnsAfter(sheet.getMaxColumns(), (colIdx + 3) - sheet.getMaxColumns());
+    }
+
     const cellValue = sheet.getRange(clientRow, colIdx + 1).getValue();
     if (!cellValue) {
       dateColumn = colIdx + 1;
