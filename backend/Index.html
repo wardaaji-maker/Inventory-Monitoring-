@@ -262,6 +262,11 @@
                         ${Object.entries(val.content || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v]) =>
                             `<span style="margin-right:10px;">${k}: ${v}</span>`
                         ).join('') || 'None'}
+
+                        <div style="font-weight:bold; color:#555; margin-top:5px;">Top Feedback:</div>
+                        ${Object.entries(val.feedback || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v]) =>
+                            `<span style="margin-right:10px;">${k}: ${v}</span>`
+                        ).join('') || 'None'}
                     </div>
                 </div>`;
             });
@@ -478,8 +483,8 @@
             type: document.getElementById('fType').value,
             content: document.getElementById('fContent').value,
             notes: document.getElementById('fNotes').value,
-            sendEmail: document.getElementById('fEmail').checked,
-            status: 'LEADS'
+            sendEmail: document.getElementById('fEmail').checked
+            // status: 'LEADS' - Removed to prevent overwriting existing status
         };
 
         const handler = google.script.run.withSuccessHandler(() => {

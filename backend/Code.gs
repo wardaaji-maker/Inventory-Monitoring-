@@ -9,7 +9,6 @@ const CONFIG = {
 };
 
 // Column indices based on your structure
-// Previous Structure: ... Status (9), Content (10), FollowUp1 (11)
 // New Structure: ... Status (9), FollowUp1_Date (10), FollowUp1_Feedback (11), FollowUp1_Content (12) ...
 const COLUMNS = {
   NO: 0,           // A
@@ -52,28 +51,32 @@ function checkAndRepairHeaders() {
       sheet = ss.insertSheet(CONFIG.SHEET_NAME);
     }
 
-    // Define expected headers
-    const headers = [
-      'No', 'Client ID', 'Client Name', 'Store Code', 'Phone Number',
-      'Email', 'Address', 'Created At', 'PIC', 'Status'
-    ];
+    // Check if sheet has data
+    const lastCol = sheet.getLastColumn();
+    if (lastCol > 0) {
+      const currentHeaders = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
-    // Add follow-up headers (Date + Feedback + Content triplets)
-    for (let i = 1; i <= CONFIG.MAX_FOLLOW_UPS; i++) {
-      headers.push(`Follow Up Date ${i}`);
-      headers.push(`Feedback ${i}`);
-      headers.push(`Content ${i}`);
+      // Heuristic: If "Progress" is at Column K (Index 10) OR "Follow Up date 1" is at Column L (Index 11)
+      // This indicates the old structure (packed dates starting at L, Progress at K)
+      const isOldStructure = (currentHeaders.length > 10 && (currentHeaders[10] === 'Progress' || currentHeaders[10] === 'J')) ||
+                             (currentHeaders.length > 11 && (currentHeaders[11] === 'Follow Up date 1' || currentHeaders[11] === 'Follow Up Date 1'));
+
+      if (isOldStructure) {
+        Logger.log('Detected Old Structure. Migrating Data...');
+        migrateData(sheet);
+        return; // Migration handles header setting
+      }
     }
 
-    // Get current headers
-    const lastCol = headers.length;
+    // Standard Repair Logic (just overwrites headers if needed)
+    const headers = generateHeaders();
+    const requiredCols = headers.length;
 
-    // Ensure sufficient columns
-    if (sheet.getMaxColumns() < lastCol) {
-      sheet.insertColumnsAfter(sheet.getMaxColumns(), lastCol - sheet.getMaxColumns());
+    if (sheet.getMaxColumns() < requiredCols) {
+      sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
     }
 
-    const range = sheet.getRange(1, 1, 1, lastCol);
+    const range = sheet.getRange(1, 1, 1, requiredCols);
     const currentHeaders = range.getValues()[0];
 
     let needsRepair = false;
@@ -104,6 +107,92 @@ function checkAndRepairHeaders() {
   }
 }
 
+function generateHeaders() {
+  const headers = [
+    'No', 'Client ID', 'Client Name', 'Store Code', 'Phone Number',
+    'Email', 'Address', 'Created At', 'PIC', 'Status'
+  ];
+
+  // Add follow-up headers (Date + Feedback + Content triplets)
+  for (let i = 1; i <= CONFIG.MAX_FOLLOW_UPS; i++) {
+    headers.push(`Follow Up Date ${i}`);
+    headers.push(`Feedback ${i}`);
+    headers.push(`Content ${i}`);
+  }
+  return headers;
+}
+
+function migrateData(sheet) {
+   const lastRow = sheet.getLastRow();
+   if (lastRow <= 1) { // Only headers
+      const newHeaders = generateHeaders();
+      const requiredCols = newHeaders.length;
+      if (sheet.getMaxColumns() < requiredCols) {
+         sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
+      }
+      sheet.getRange(1, 1, 1, requiredCols).setValues([newHeaders]);
+      return;
+   }
+
+   const lastCol = sheet.getLastColumn();
+   // Read all data (including headers to be safe with indices, but we skip row 1)
+   const oldData = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+
+   // Transform Data
+   const newData = oldData.map(row => {
+      // Static cols 0-9 (A-J). Note: Old K(10) was Progress, discard it.
+      const newRow = [];
+      for(let i=0; i<=9; i++) {
+          newRow[i] = (row[i] !== undefined) ? row[i] : '';
+      }
+
+      // Old Dates started at L(11) (Index 11)
+      // New Dates start at K(10) with stride 3
+      let oldDateIdx = 11;
+      let newTripletIdx = 10;
+
+      // Process packed dates
+      while(oldDateIdx < row.length) {
+         const dateVal = row[oldDateIdx];
+         if (dateVal) {
+            newRow[newTripletIdx] = dateVal; // Date
+            newRow[newTripletIdx + 1] = '';  // Feedback (Empty)
+            newRow[newTripletIdx + 2] = '';  // Content (Empty)
+         }
+         oldDateIdx++; // Move to next packed date
+         newTripletIdx += 3; // Move to next triplet
+      }
+      return newRow;
+   });
+
+   // Clear old data
+   sheet.clearContents();
+
+   // Set New Headers
+   const newHeaders = generateHeaders();
+   const requiredCols = newHeaders.length;
+
+   if (sheet.getMaxColumns() < requiredCols) {
+     sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
+   }
+
+   sheet.getRange(1, 1, 1, requiredCols).setValues([newHeaders]);
+
+   // Write Data
+   if (newData.length > 0) {
+     const maxLen = Math.max(...newData.map(r => r.length));
+     const normalizedData = newData.map(r => {
+        while(r.length < maxLen) r.push('');
+        return r;
+     });
+
+     sheet.getRange(2, 1, normalizedData.length, maxLen).setValues(normalizedData);
+   }
+
+   SpreadsheetApp.flush();
+   Logger.log('Migration Completed.');
+}
+
 // Get Promotion Types from Settings
 function getPromotionTypes() {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
@@ -126,7 +215,10 @@ function getAllClients() {
   if (lastRow <= 1) return [];
 
   const totalCols = 10 + (CONFIG.MAX_FOLLOW_UPS * 3);
-  const data = sheet.getRange(2, 1, lastRow-1, totalCols).getValues();
+  // Ensure we don't read beyond existing columns if sheet is small (though checkHeaders should fix it)
+  const actualCols = Math.min(totalCols, sheet.getLastColumn());
+
+  const data = sheet.getRange(2, 1, lastRow-1, actualCols).getValues();
 
   const clients = data.map((row, index) => {
     // Collect all follow-up dates, feedback, and content
@@ -140,9 +232,12 @@ function getAllClients() {
       const feedbackColIdx = dateColIdx + 1;
       const contentColIdx = dateColIdx + 2;
 
+      // Safety check for indices
+      if (dateColIdx >= row.length) break;
+
       const dateVal = row[dateColIdx];
-      const feedbackVal = row[feedbackColIdx];
-      const contentVal = row[contentColIdx];
+      const feedbackVal = (feedbackColIdx < row.length) ? row[feedbackColIdx] : '';
+      const contentVal = (contentColIdx < row.length) ? row[contentColIdx] : '';
 
       if (dateVal && dateVal instanceof Date) {
         followUps.push({
@@ -490,6 +585,89 @@ function exportClientData() {
 
 // Schedule daily reminders
 function scheduleDailyReminders() {
-  // ... (keep logic simple or same)
-  return { sent: 0 };
+  const clients = getClientsNeedingFollowup();
+
+  if (clients.length === 0) return { sent: 0 };
+
+  // Group by PIC
+  const clientsByPIC = {};
+  clients.forEach(client => {
+    const pic = client.pic || Session.getActiveUser().getEmail();
+    if (!clientsByPIC[pic]) clientsByPIC[pic] = [];
+    clientsByPIC[pic].push(client);
+  });
+
+  // Send email to each PIC
+  Object.keys(clientsByPIC).forEach(pic => {
+    const picClients = clientsByPIC[pic];
+    const subject = `Follow-up Reminder: ${picClients.length} clients need attention`;
+
+    let htmlBody = `
+      <h2>Follow-up Reminder</h2>
+      <p>Dear ${pic.split('@')[0]},</p>
+      <p>You have ${picClients.length} clients requiring follow-up:</p>
+      <table border="1" cellpadding="5" style="border-collapse: collapse;">
+        <tr style="background-color: #f2f2f2;">
+          <th>Client ID</th>
+          <th>Client Name</th>
+          <th>Store Code</th>
+          <th>Status</th>
+          <th>Next Follow-up</th>
+          <th>Content</th>
+        </tr>
+    `;
+
+    picClients.forEach(client => {
+      htmlBody += `
+        <tr>
+          <td>${client.clientId}</td>
+          <td><strong>${client.clientName}</strong></td>
+          <td>${client.storeCode}</td>
+          <td>${client.status || 'No Status'}</td>
+          <td style="color: #e74c3c;"><strong>${formatDate(client.nextFollowUp)}</strong></td>
+          <td>${client.content || 'N/A'}</td>
+        </tr>
+      `;
+    });
+
+    htmlBody += `
+      </table>
+      <p style="margin-top: 20px;">
+        <a href="${ScriptApp.getService().getUrl()}" style="
+          background-color: #3498db;
+          color: white;
+          padding: 10px 20px;
+          text-decoration: none;
+          border-radius: 5px;
+          display: inline-block;
+        ">Open Follow-up System</a>
+      </p>
+    `;
+
+    GmailApp.sendEmail(pic, subject, '', {
+      htmlBody: htmlBody,
+      name: 'Client Follow-up System'
+    });
+  });
+
+  return { sent: Object.keys(clientsByPIC).length };
+}
+
+// Create daily reminder trigger
+function createDailyReminderTrigger() {
+  // Remove existing triggers
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(trigger => {
+    if (trigger.getHandlerFunction() === 'scheduleDailyReminders') {
+      ScriptApp.deleteTrigger(trigger);
+    }
+  });
+
+  // Create new trigger for 8 AM daily
+  ScriptApp.newTrigger('scheduleDailyReminders')
+    .timeBased()
+    .atHour(8)
+    .nearMinute(30)
+    .everyDays(1)
+    .create();
 }
