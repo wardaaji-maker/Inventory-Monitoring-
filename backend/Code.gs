@@ -158,14 +158,20 @@ function getAllClients() {
     let nextFollowUp = null;
     let overdueFollowUps = 0;
 
-    if (latestFollowUpDate) {
-         nextFollowUp = new Date(latestFollowUpDate);
-         nextFollowUp.setDate(nextFollowUp.getDate() + 4); // Example logic: +4 days
-         nextFollowUp.setHours(0,0,0,0);
-    } else if (row[COLUMNS.CREATED_AT] instanceof Date) {
-         nextFollowUp = new Date(row[COLUMNS.CREATED_AT]);
-         nextFollowUp.setDate(nextFollowUp.getDate() + 4);
-         nextFollowUp.setHours(0,0,0,0);
+    // Stop follow up if status is TERHUBUNG
+    const content = row[COLUMNS.CONTENT];
+    if (content === 'TERHUBUNG') {
+        nextFollowUp = null;
+    } else {
+        if (latestFollowUpDate) {
+             nextFollowUp = new Date(latestFollowUpDate);
+             nextFollowUp.setDate(nextFollowUp.getDate() + 4); // Example logic: +4 days
+             nextFollowUp.setHours(0,0,0,0);
+        } else if (row[COLUMNS.CREATED_AT] instanceof Date) {
+             nextFollowUp = new Date(row[COLUMNS.CREATED_AT]);
+             nextFollowUp.setDate(nextFollowUp.getDate() + 4);
+             nextFollowUp.setHours(0,0,0,0);
+        }
     }
 
     if (nextFollowUp && nextFollowUp < today) {
@@ -212,11 +218,8 @@ function getClientsNeedingFollowup() {
   return dueClients;
 }
 
-// Record a new follow-up
-function recordFollowup(clientRow, followupData) {
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
-
+// Helper function to save a single follow-up
+function saveFollowupInternal(sheet, clientRow, followupData) {
   // Find the next empty follow-up slot
   let dateColumn = null;
   let feedbackColumn = null;
@@ -265,12 +268,33 @@ function recordFollowup(clientRow, followupData) {
 
   // Send email notification if requested
   if (followupData.sendEmail) {
-    sendFollowupNotification(clientRow, followupData);
+    sendFollowupNotification(sheet, clientRow, followupData);
   }
+}
+
+// Record a new follow-up (Single)
+function recordFollowup(clientRow, followupData) {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
+
+  saveFollowupInternal(sheet, clientRow, followupData);
 
   SpreadsheetApp.flush();
 
   return { success: true };
+}
+
+// Record bulk follow-up
+function recordBulkFollowup(clientRows, followupData) {
+  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
+  const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
+
+  for (let i = 0; i < clientRows.length; i++) {
+    saveFollowupInternal(sheet, clientRows[i], followupData);
+  }
+
+  SpreadsheetApp.flush();
+  return { success: true, count: clientRows.length };
 }
 
 // Log follow-up activity in a separate sheet
@@ -301,9 +325,13 @@ function logFollowupActivity(activity) {
 }
 
 // Send follow-up notification email
-function sendFollowupNotification(clientRow, followupData) {
-  const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
-  const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
+function sendFollowupNotification(sheet, clientRow, followupData) {
+  // If sheet not passed (single call legacy), open it. But we refactored to pass sheet.
+  // Actually, wait, `sendFollowupNotification` used `clientRow` and opened sheet internally.
+  // I updated `saveFollowupInternal` to pass `sheet`. I should check if `sendFollowupNotification` needs update.
+  // Yes, I should update `sendFollowupNotification` to accept `sheet` or just remove the `openById` inside it if I pass sheet.
+  // But wait, `sendFollowupNotification` in previous code took `clientRow` and opened sheet.
+  // Let's refactor it to take `sheet` to be efficient.
 
   const clientData = {
     name: sheet.getRange(clientRow, COLUMNS.CLIENT_NAME + 1).getValue(),
