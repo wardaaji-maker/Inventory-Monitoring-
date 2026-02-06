@@ -5,10 +5,12 @@ const CONFIG = {
   SPREADSHEET_ID: '1r8MbuBCBx2dTkfk7BVgNhxaZrPWPY6EvsKQBmE176VM',
   SHEET_NAME: 'Leads', // Your sheet name
   MAX_FOLLOW_UPS: 10, // Maximum follow-up date columns
-  FOLLOW_UP_START_COL: 11 // Column L (0-indexed 11)
+  FOLLOW_UP_START_COL: 10 // Column K (0-indexed 10), since Content was index 10 and is now removed from main cols
 };
 
 // Column indices based on your structure
+// Previous Structure: ... Status (9), Content (10), FollowUp1 (11)
+// New Structure: ... Status (9), FollowUp1_Date (10), FollowUp1_Feedback (11), FollowUp1_Content (12) ...
 const COLUMNS = {
   NO: 0,           // A
   CLIENT_ID: 1,    // B
@@ -20,8 +22,8 @@ const COLUMNS = {
   CREATED_AT: 7,   // H
   PIC: 8,          // I
   STATUS: 9,       // J
-  CONTENT: 10,     // K (Renamed from PROGRESS)
-  FOLLOW_UP_START: 11 // L
+  // Content column removed from main area
+  FOLLOW_UP_START: 10 // K
 };
 
 // Main web app
@@ -53,13 +55,14 @@ function checkAndRepairHeaders() {
     // Define expected headers
     const headers = [
       'No', 'Client ID', 'Client Name', 'Store Code', 'Phone Number',
-      'Email', 'Address', 'Created At', 'PIC', 'Status', 'Content'
+      'Email', 'Address', 'Created At', 'PIC', 'Status'
     ];
 
-    // Add follow-up headers (Date + Feedback pairs)
+    // Add follow-up headers (Date + Feedback + Content triplets)
     for (let i = 1; i <= CONFIG.MAX_FOLLOW_UPS; i++) {
       headers.push(`Follow Up Date ${i}`);
       headers.push(`Feedback ${i}`);
+      headers.push(`Content ${i}`);
     }
 
     // Get current headers
@@ -122,31 +125,36 @@ function getAllClients() {
 
   if (lastRow <= 1) return [];
 
-  const totalCols = 11 + (CONFIG.MAX_FOLLOW_UPS * 2);
+  const totalCols = 10 + (CONFIG.MAX_FOLLOW_UPS * 3);
   const data = sheet.getRange(2, 1, lastRow-1, totalCols).getValues();
 
   const clients = data.map((row, index) => {
-    // Collect all follow-up dates and feedback
+    // Collect all follow-up dates, feedback, and content
     const followUps = [];
     let latestFollowUpDate = null;
     let latestFeedback = '';
+    let latestContent = '';
 
     for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
-      const dateColIdx = COLUMNS.FOLLOW_UP_START + (i * 2);
+      const dateColIdx = COLUMNS.FOLLOW_UP_START + (i * 3);
       const feedbackColIdx = dateColIdx + 1;
+      const contentColIdx = dateColIdx + 2;
 
       const dateVal = row[dateColIdx];
       const feedbackVal = row[feedbackColIdx];
+      const contentVal = row[contentColIdx];
 
       if (dateVal && dateVal instanceof Date) {
         followUps.push({
           date: dateVal,
-          feedback: feedbackVal || ''
+          feedback: feedbackVal || '',
+          content: contentVal || ''
         });
 
         if (!latestFollowUpDate || dateVal > latestFollowUpDate) {
           latestFollowUpDate = dateVal;
           latestFeedback = feedbackVal || '';
+          latestContent = contentVal || '';
         }
       }
     }
@@ -158,14 +166,12 @@ function getAllClients() {
     let nextFollowUp = null;
     let overdueFollowUps = 0;
 
-    // Stop follow up if status is TERHUBUNG
-    const content = row[COLUMNS.CONTENT];
-    if (content === 'TERHUBUNG') {
+    if (latestContent === 'TERHUBUNG') {
         nextFollowUp = null;
     } else {
         if (latestFollowUpDate) {
              nextFollowUp = new Date(latestFollowUpDate);
-             nextFollowUp.setDate(nextFollowUp.getDate() + 4); // Example logic: +4 days
+             nextFollowUp.setDate(nextFollowUp.getDate() + 4);
              nextFollowUp.setHours(0,0,0,0);
         } else if (row[COLUMNS.CREATED_AT] instanceof Date) {
              nextFollowUp = new Date(row[COLUMNS.CREATED_AT]);
@@ -190,7 +196,7 @@ function getAllClients() {
       createdAt: row[COLUMNS.CREATED_AT],
       pic: row[COLUMNS.PIC],
       status: row[COLUMNS.STATUS],
-      content: row[COLUMNS.CONTENT],
+      content: latestContent, // Derived from latest follow-up
       followUps: followUps,
       latestFeedback: latestFeedback,
       nextFollowUp: nextFollowUp,
@@ -223,35 +229,35 @@ function saveFollowupInternal(sheet, clientRow, followupData) {
   // Find the next empty follow-up slot
   let dateColumn = null;
   let feedbackColumn = null;
+  let contentColumn = null;
 
   for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
-    const colIdx = COLUMNS.FOLLOW_UP_START + (i * 2);
+    const colIdx = COLUMNS.FOLLOW_UP_START + (i * 3);
     const cellValue = sheet.getRange(clientRow, colIdx + 1).getValue();
     if (!cellValue) {
       dateColumn = colIdx + 1;
       feedbackColumn = colIdx + 2;
+      contentColumn = colIdx + 3;
       break;
     }
   }
 
   if (!dateColumn) {
-    const lastIdx = COLUMNS.FOLLOW_UP_START + ((CONFIG.MAX_FOLLOW_UPS - 1) * 2);
+    const lastIdx = COLUMNS.FOLLOW_UP_START + ((CONFIG.MAX_FOLLOW_UPS - 1) * 3);
     dateColumn = lastIdx + 1;
     feedbackColumn = lastIdx + 2;
+    contentColumn = lastIdx + 3;
   }
 
-  // Record Date and Feedback
+  // Record Date, Feedback, Content
   const followupDate = new Date(followupData.date);
   sheet.getRange(clientRow, dateColumn).setValue(followupDate);
   sheet.getRange(clientRow, feedbackColumn).setValue(followupData.notes);
+  sheet.getRange(clientRow, contentColumn).setValue(followupData.content);
 
-  // Update status and content
+  // Update status
   if (followupData.status) {
     sheet.getRange(clientRow, COLUMNS.STATUS + 1).setValue(followupData.status);
-  }
-
-  if (followupData.content) {
-    sheet.getRange(clientRow, COLUMNS.CONTENT + 1).setValue(followupData.content);
   }
 
   // Log the follow-up activity
@@ -326,13 +332,6 @@ function logFollowupActivity(activity) {
 
 // Send follow-up notification email
 function sendFollowupNotification(sheet, clientRow, followupData) {
-  // If sheet not passed (single call legacy), open it. But we refactored to pass sheet.
-  // Actually, wait, `sendFollowupNotification` used `clientRow` and opened sheet internally.
-  // I updated `saveFollowupInternal` to pass `sheet`. I should check if `sendFollowupNotification` needs update.
-  // Yes, I should update `sendFollowupNotification` to accept `sheet` or just remove the `openById` inside it if I pass sheet.
-  // But wait, `sendFollowupNotification` in previous code took `clientRow` and opened sheet.
-  // Let's refactor it to take `sheet` to be efficient.
-
   const clientData = {
     name: sheet.getRange(clientRow, COLUMNS.CLIENT_NAME + 1).getValue(),
     id: sheet.getRange(clientRow, COLUMNS.CLIENT_ID + 1).getValue(),
@@ -430,21 +429,21 @@ function getDashboardStats() {
 
 // Get follow-up history for a client
 function getClientFollowupHistory(clientRow) {
-  // Since we have data in the row, we could parse it from getAllClients logic,
-  // but to be safe and simple, we read again or just implement based on structure
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
 
   const followUps = [];
   for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
-    const colIdx = COLUMNS.FOLLOW_UP_START + (i * 2);
+    const colIdx = COLUMNS.FOLLOW_UP_START + (i * 3);
     const date = sheet.getRange(clientRow, colIdx + 1).getValue();
     const feedback = sheet.getRange(clientRow, colIdx + 2).getValue();
+    const content = sheet.getRange(clientRow, colIdx + 3).getValue();
 
     if (date && date instanceof Date) {
       followUps.push({
         date: date.toISOString(),
         feedback: feedback || '',
+        content: content || '',
         sequence: i + 1
       });
     }

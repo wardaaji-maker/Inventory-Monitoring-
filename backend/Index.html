@@ -348,7 +348,7 @@
         // Desktop
         let html = `<table class="data-table"><thead><tr>
             ${headerCheckbox}
-            <th>ID</th><th>Name</th><th>PIC</th><th>Content</th><th>Latest Feedback</th><th>Next Follow-up</th><th>Actions</th>
+            <th>ID</th><th>Name</th><th>PIC</th><th>Latest Content</th><th>Latest Feedback</th><th>Next Follow-up</th><th>Actions</th>
         </tr></thead><tbody>`;
 
         // Mobile
@@ -385,7 +385,7 @@
                   <span style="font-size:0.8em; background:#e8f4fc; padding:2px 6px; border-radius:4px;">${c.clientId}</span>
                </div>
                <div class="mobile-card-body">
-                  <div><i class="fas fa-tag"></i> Content: ${c.content || '-'}</div>
+                  <div><i class="fas fa-tag"></i> Latest Content: ${c.content || '-'}</div>
                   <div><i class="fas fa-comment"></i> Feedback: ${c.latestFeedback || '-'}</div>
                   <div style="${c.overdueFollowUps>0?'color:#e74c3c':''}"><i class="fas fa-clock"></i> Next: ${next}</div>
                   <div><i class="fas fa-user"></i> PIC: ${c.pic || '-'}</div>
@@ -448,7 +448,8 @@
         if(!c) return;
         document.getElementById('clientIdRow').value = row;
         document.getElementById('followupInfo').innerHTML = `<strong>${c.clientName}</strong><br>Last Content: ${c.content||'None'}`;
-        document.getElementById('fContent').value = c.content || '';
+        // Reset content to force selection for next blast or leave empty
+        document.getElementById('fContent').value = '';
         document.getElementById('followupModal').style.display = 'flex';
     }
 
