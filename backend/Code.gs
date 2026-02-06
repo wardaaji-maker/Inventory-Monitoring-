@@ -27,7 +27,7 @@ const COLUMNS = {
 
 // Main web app
 function doGet() {
-  // Inspect headers on load but DO NOT clear data
+  // Inspect headers on load
   checkAndRepairHeaders();
 
   return HtmlService.createTemplateFromFile('Index')
@@ -61,7 +61,10 @@ function checkAndRepairHeaders() {
       settingsSheet.getRange('A4').setValue('Special Offer');
     }
 
-    // Standard Repair Logic (just appends headers if needed)
+    // Run Safe Migration if needed
+    safeMigrateData(sheet);
+
+    // Standard Repair Logic (Append Only)
     const headers = generateHeaders();
     const requiredCols = headers.length;
 
@@ -69,26 +72,54 @@ function checkAndRepairHeaders() {
       sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
     }
 
-    // Only set headers if sheet is empty or row 1 is empty
     const lastRow = sheet.getLastRow();
     if (lastRow === 0) {
        sheet.getRange(1, 1, 1, requiredCols).setValues([headers]);
-       return;
-    }
-
-    // Check existing headers but DO NOT OVERWRITE DATA
-    const currentHeaders = sheet.getRange(1, 1, 1, requiredCols).getValues()[0];
-    let needsRepair = false;
-    for (let i = 0; i < headers.length; i++) {
-      if (currentHeaders[i] !== headers[i]) {
-        // If header mismatch, log it but don't overwrite user data
-        Logger.log(`Header mismatch at index ${i}: Expected ${headers[i]}, Found ${currentHeaders[i]}`);
-      }
     }
 
   } catch (e) {
     Logger.log('Error checking headers: ' + e.toString());
   }
+}
+
+function safeMigrateData(sheet) {
+    const lastCol = sheet.getLastColumn();
+    if (lastCol === 0) return;
+
+    // Check for "Progress" column at Index 10 (Column 11/K)
+    // Note: getRange is 1-based.
+    let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+    if (headers.length > 10 && (headers[10] === 'Progress' || headers[10] === 'J')) {
+        Logger.log("Safe Migration: Deleting 'Progress' column...");
+        sheet.deleteColumn(11); // Delete Column K
+        // Refresh headers
+        headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    }
+
+    // Check for missing "Content" columns
+    // New Structure: Status(10/J) -> F1_Date(11/K) -> F1_Feed(12/L) -> F1_Cont(13/M)
+    for (let i = 1; i <= CONFIG.MAX_FOLLOW_UPS; i++) {
+        const dateColIdx = 11 + (i - 1) * 3; // 1-based
+        const feedColIdx = 12 + (i - 1) * 3;
+        const contColIdx = 13 + (i - 1) * 3;
+
+        // Ensure we have enough columns to check, if not, we might need to stop or extend
+        if (headers.length < contColIdx - 1) {
+            // Header array is 0-based, so index is ColIdx - 1.
+            // If header array is shorter, we definitely don't have the column.
+        } else {
+            const currentHeader = headers[contColIdx - 1];
+            if (currentHeader !== `Content ${i}`) {
+                Logger.log(`Safe Migration: Inserting 'Content ${i}' at Column ${contColIdx}...`);
+                sheet.insertColumnAfter(feedColIdx);
+                sheet.getRange(1, contColIdx).setValue(`Content ${i}`);
+                // Update local headers array to reflect insertion
+                // It's easier to just fetch again or manually splice
+                headers.splice(contColIdx - 1, 0, `Content ${i}`);
+            }
+        }
+    }
 }
 
 function generateHeaders() {
@@ -105,9 +136,6 @@ function generateHeaders() {
   }
   return headers;
 }
-
-// MIGRATION DISABLED TO PREVENT DATA LOSS
-// function migrateData(sheet) { ... }
 
 // Get Promotion Types from Settings
 function getPromotionTypes() {
