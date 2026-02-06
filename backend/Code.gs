@@ -77,9 +77,40 @@ function checkAndRepairHeaders() {
        sheet.getRange(1, 1, 1, requiredCols).setValues([headers]);
     }
 
+    // Apply Data Validation to Content Columns
+    syncContentValidation(sheet, settingsSheet);
+
   } catch (e) {
     Logger.log('Error checking headers: ' + e.toString());
   }
+}
+
+function syncContentValidation(sheet, settingsSheet) {
+    const lastRow = settingsSheet.getLastRow();
+    if (lastRow < 2) return;
+
+    // Get Promotion Types Range
+    const validationRange = settingsSheet.getRange(2, 1, lastRow - 1, 1);
+    const rule = SpreadsheetApp.newDataValidation()
+        .requireValueInRange(validationRange)
+        .setAllowInvalid(true)
+        .build();
+
+    // Apply to all "Content" columns
+    // Content columns are at index 12, 15, 18... (1-based: 13, 16, 19...)
+    const numRows = sheet.getMaxRows() > 1 ? sheet.getMaxRows() - 1 : 100;
+
+    for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
+        // 1-based index calculation:
+        // Start Col K(11) -> Date(11), Feedback(12), Content(13)
+        // Next: K+3(14) -> Date(14), Feedback(15), Content(16)
+        const contentColIdx = 13 + (i * 3);
+
+        if (contentColIdx <= sheet.getMaxColumns()) {
+            sheet.getRange(2, contentColIdx, numRows, 1).setDataValidation(rule);
+        }
+    }
+    Logger.log("Content validation synced.");
 }
 
 function safeMigrateData(sheet) {
@@ -87,35 +118,28 @@ function safeMigrateData(sheet) {
     if (lastCol === 0) return;
 
     // Check for "Progress" column at Index 10 (Column 11/K)
-    // Note: getRange is 1-based.
     let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
     if (headers.length > 10 && (headers[10] === 'Progress' || headers[10] === 'J')) {
         Logger.log("Safe Migration: Deleting 'Progress' column...");
         sheet.deleteColumn(11); // Delete Column K
-        // Refresh headers
         headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     }
 
     // Check for missing "Content" columns
-    // New Structure: Status(10/J) -> F1_Date(11/K) -> F1_Feed(12/L) -> F1_Cont(13/M)
     for (let i = 1; i <= CONFIG.MAX_FOLLOW_UPS; i++) {
         const dateColIdx = 11 + (i - 1) * 3; // 1-based
         const feedColIdx = 12 + (i - 1) * 3;
         const contColIdx = 13 + (i - 1) * 3;
 
-        // Ensure we have enough columns to check, if not, we might need to stop or extend
         if (headers.length < contColIdx - 1) {
-            // Header array is 0-based, so index is ColIdx - 1.
-            // If header array is shorter, we definitely don't have the column.
+           // Header missing, likely need extension, handled by standard repair
         } else {
             const currentHeader = headers[contColIdx - 1];
             if (currentHeader !== `Content ${i}`) {
                 Logger.log(`Safe Migration: Inserting 'Content ${i}' at Column ${contColIdx}...`);
                 sheet.insertColumnAfter(feedColIdx);
                 sheet.getRange(1, contColIdx).setValue(`Content ${i}`);
-                // Update local headers array to reflect insertion
-                // It's easier to just fetch again or manually splice
                 headers.splice(contColIdx - 1, 0, `Content ${i}`);
             }
         }
