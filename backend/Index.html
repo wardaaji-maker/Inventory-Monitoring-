@@ -15,9 +15,10 @@
     .sidebar { width: 250px; background: white; padding: 20px; border-radius: 10px; display: flex; flex-direction: column; gap: 10px; }
     .sidebar button { padding: 12px; border: none; background: none; text-align: left; cursor: pointer; border-radius: 5px; }
     .sidebar button.active { background: #e8f4fc; color: var(--primary); font-weight: bold; }
-    .main-content { flex: 1; background: white; padding: 25px; border-radius: 10px; overflow-y: auto; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    .main-content { flex: 1; background: white; padding: 25px; border-radius: 10px; overflow-y: auto; display: flex; flex-direction: column; }
+    .tab-content { display: none; height: 100%; flex-direction: column; }
+    .tab-content.active { display: flex; }
+    .data-table-container { flex: 1; overflow-y: auto; position: relative; min-height: 200px; }
     .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
     .data-table th, .data-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
     .btn { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; background: #e0e0e0; }
@@ -28,6 +29,8 @@
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+    .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee; }
+    .loading-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; z-index: 10; display: none; }
 
     /* Mobile Styles */
     @media (max-width: 768px) {
@@ -37,7 +40,7 @@
         .sidebar button { flex: 0 0 auto; white-space: nowrap; }
         .stats-grid { grid-template-columns: 1fr 1fr; }
         .header { flex-direction: column; gap: 10px; text-align: center; }
-        .main-content { padding: 15px; }
+        .main-content { padding: 15px; height: auto; }
 
         .data-table { display: none; } /* Hide table on mobile */
         .mobile-list { display: block; }
@@ -80,13 +83,13 @@
       <div class="main-content">
         <div id="dashboardTab" class="tab-content active">
           <h2>Dashboard</h2>
-          <div id="dashboardContent"></div>
+          <div id="dashboardContent" style="overflow-y: auto;"></div>
         </div>
 
         <div id="clientsTab" class="tab-content">
-          <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+          <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom: 10px;">
             <div style="display:flex; align-items:center;">
-                <h2>All Clients</h2>
+                <h2 style="margin:0;">All Clients</h2>
                 <div id="bulkActions" style="display:none; margin-left: 15px;">
                     <button onclick="openBulkFollowupModal()" class="btn" style="background:#3498db; color:white;"><i class="fas fa-users-cog"></i> Update Selected (<span id="selectedCount">0</span>)</button>
                 </div>
@@ -101,17 +104,29 @@
               </select>
             </div>
           </div>
-          <div id="clientsContent"></div>
+          <div class="data-table-container">
+            <div id="clientsLoader" class="loading-overlay"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+            <div id="clientsContent"></div>
+          </div>
+          <div id="clientsPagination" class="pagination"></div>
         </div>
 
         <div id="dueTab" class="tab-content">
           <h2>Due Today</h2>
-          <div id="dueContent"></div>
+          <div class="data-table-container">
+            <div id="dueLoader" class="loading-overlay"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+            <div id="dueContent"></div>
+          </div>
+          <div id="duePagination" class="pagination"></div>
         </div>
 
         <div id="overdueTab" class="tab-content">
           <h2>Overdue</h2>
-          <div id="overdueContent"></div>
+          <div class="data-table-container">
+            <div id="overdueLoader" class="loading-overlay"><i class="fas fa-spinner fa-spin fa-2x"></i></div>
+            <div id="overdueContent"></div>
+          </div>
+          <div id="overduePagination" class="pagination"></div>
         </div>
       </div>
     </div>
@@ -184,8 +199,17 @@
   </div>
 
   <script>
-    let clients = [];
+    let currentClients = []; // Holds current page data
     let selectedRows = [];
+    let currentParams = {
+        category: 'all', // all, due, overdue
+        search: '',
+        pic: '',
+        content: '',
+        page: 1,
+        pageSize: 20
+    };
+    let searchTimeout = null;
 
     function init() {
         console.log("App initializing...");
@@ -195,18 +219,24 @@
                 fDateInput.valueAsDate = new Date();
             }
 
-            // Parallel loading
+            // Restore State
+            const savedTab = localStorage.getItem('currentTab') || 'dashboard';
+            // Note: We don't restore search/filter automatically to avoid confusion on reload,
+            // but we could if needed. For now, reset filters.
+
+            // Load initial data
             Promise.all([
                 new Promise(resolve => loadDashboard(resolve)),
-                new Promise(resolve => loadClients(resolve)),
                 new Promise(resolve => loadPromotions(resolve))
             ]).then(() => {
                 const loader = document.getElementById('app-loading');
                 if(loader) loader.style.display = 'none';
                 console.log("App fully loaded.");
+
+                showTab(savedTab); // This triggers data fetch if it's a client tab
+
             }).catch(e => {
                 console.error("Loading error:", e);
-                // Hide loader anyway so user can see partial content or try again
                 const loader = document.getElementById('app-loading');
                 if(loader) loader.style.display = 'none';
             });
@@ -216,12 +246,6 @@
                 saveFollowup();
             };
 
-            // Restore State
-            const savedTab = localStorage.getItem('currentTab') || 'dashboard';
-            showTab(savedTab);
-
-            const savedSearch = localStorage.getItem('search');
-            if(savedSearch) document.getElementById('search').value = savedSearch;
         } catch (e) {
             console.error(e);
             alert("Error initializing app: " + e.message);
@@ -236,32 +260,21 @@
 
     function loadPromotions(callback) {
         google.script.run.withSuccessHandler(function(types) {
-            // Modal Dropdown
             const sel = document.getElementById('fContent');
             sel.innerHTML = '<option value="">-- Select Content --</option>';
-            // Filter Dropdown
             const filterSel = document.getElementById('filterContent');
             filterSel.innerHTML = '<option value="">All Content</option>';
 
             if (types && Array.isArray(types)) {
                 types.forEach(function(t) {
-                    // Modal
                     const opt = document.createElement('option');
                     opt.value = t; opt.textContent = t;
                     sel.appendChild(opt);
 
-                    // Filter
                     const filterOpt = document.createElement('option');
                     filterOpt.value = t; filterOpt.textContent = t;
                     filterSel.appendChild(filterOpt);
                 });
-            }
-
-            // Restore Filters
-            const savedContent = localStorage.getItem('filterContent');
-            if(savedContent) {
-                filterSel.value = savedContent;
-                filterClients(); // Re-trigger filter
             }
             if(callback) callback();
         }).withFailureHandler(function(e) { onError(e); if(callback) callback(); }).getPromotionTypes();
@@ -270,30 +283,34 @@
     function loadDashboard(callback) {
         google.script.run.withSuccessHandler(function(stats) {
             renderDashboard(stats);
+            // Populate PIC Filter from stats
+            if (stats.picStats) {
+                 const sel = document.getElementById('filterPic');
+                 sel.innerHTML = '<option value="">All PIC</option>';
+                 Object.keys(stats.picStats).forEach(p => {
+                    if (p && p !== 'Unassigned') {
+                        const opt = document.createElement('option');
+                        opt.value = p; opt.textContent = p;
+                        sel.appendChild(opt);
+                    }
+                 });
+            }
             if(callback) callback();
         }).withFailureHandler(function(e) { onError(e); if(callback) callback(); }).getDashboardStats();
     }
 
     function renderDashboard(stats) {
-        // Stats Grid
         document.getElementById('statsGrid').innerHTML =
             '<div class="stat-card"><h1>' + stats.totalClients + '</h1><p>Total Clients</p></div>' +
             '<div class="stat-card"><h1>' + stats.dueFollowups + '</h1><p>Due Today</p></div>' +
             '<div class="stat-card"><h1 style="color:#e74c3c">' + stats.overdueClients + '</h1><p>Overdue</p></div>' +
             '<div class="stat-card"><h1>' + stats.avgFollowUps + '</h1><p>Avg Follow-ups</p></div>';
 
-        // Breakdowns
         let html = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">';
-
-        // Content
         html += createChartCard('Content Breakdown', stats.contentCounts);
-        // Feedback
         html += createChartCard('Feedback Breakdown', stats.feedbackCounts);
-        // Store
         html += createChartCard('Store Performance', stats.storeStats, true);
-        // PIC
         html += createChartCard('PIC Performance', stats.picStats, true);
-
         html += '</div>';
         document.getElementById('dashboardContent').innerHTML = html;
     }
@@ -312,17 +329,6 @@
                     '<div style="font-size:0.9em; color:#666; margin-top:5px;">' +
                         'Total: ' + val.total + ' | Followed-up: ' + val.followedUp +
                     '</div>' +
-                    '<div style="margin-top:8px; font-size:0.85em; padding-left:10px; border-left:2px solid #ddd;">' +
-                        '<div style="font-weight:bold; color:#555;">Top Content:</div>' +
-                        (Object.entries(val.content || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
-                            '<span style="margin-right:10px;">' + e[0] + ': ' + e[1] + '</span>'
-                        ).join('') || 'None') +
-
-                        '<div style="font-weight:bold; color:#555; margin-top:5px;">Top Feedback:</div>' +
-                        (Object.entries(val.feedback || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
-                            '<span style="margin-right:10px;">' + e[0] + ': ' + e[1] + '</span>'
-                        ).join('') || 'None') +
-                    '</div>' +
                 '</div>';
             });
         } else {
@@ -338,75 +344,79 @@
         return html;
     }
 
-    function loadClients(callback) {
-        google.script.run.withSuccessHandler(function(data) {
-            clients = data || [];
-            populateFilters();
-            renderTable(clients, 'clientsContent');
+    function fetchClients(resetPage) {
+        if (resetPage) currentParams.page = 1;
 
-            // Due/Overdue
-            const due = clients.filter(function(c) {
-                 if(!c.nextFollowUp) return false;
-                 const d = new Date(c.nextFollowUp); d.setHours(0,0,0,0);
-                 const today = new Date(); today.setHours(0,0,0,0);
-                 return d.getTime() <= today.getTime();
-            });
-            renderTable(due, 'dueContent', false);
+        // Show loading
+        let containerId, loaderId, paginationId;
+        if (currentParams.category === 'all') { containerId = 'clientsContent'; loaderId = 'clientsLoader'; paginationId = 'clientsPagination'; }
+        else if (currentParams.category === 'due') { containerId = 'dueContent'; loaderId = 'dueLoader'; paginationId = 'duePagination'; }
+        else if (currentParams.category === 'overdue') { containerId = 'overdueContent'; loaderId = 'overdueLoader'; paginationId = 'overduePagination'; }
 
-            const overdue = clients.filter(function(c) { return c.overdueFollowUps > 0; });
-            renderTable(overdue, 'overdueContent', false);
+        if(loaderId) document.getElementById(loaderId).style.display = 'flex';
 
-            // Restore Filters triggering (if already populated)
-            const savedPic = localStorage.getItem('filterPic');
-            if(savedPic && document.getElementById('filterPic').options.length > 1) {
-                document.getElementById('filterPic').value = savedPic;
-                filterClients();
-            }
-            if(callback) callback();
-        }).withFailureHandler(function(e) { onError(e); if(callback) callback(); }).getAllClients(true); // Pass true for simple mode
+        google.script.run.withSuccessHandler(function(response) {
+            currentClients = response.data || [];
+            renderTable(currentClients, containerId);
+            renderPagination(response, paginationId);
+            if(loaderId) document.getElementById(loaderId).style.display = 'none';
+        }).withFailureHandler(function(e) {
+            if(loaderId) document.getElementById(loaderId).style.display = 'none';
+            document.getElementById(containerId).innerHTML = '<p style="color:red">Error loading data.</p>';
+            console.error(e);
+        }).searchClients(currentParams);
     }
 
-    function populateFilters() {
-        const uniquePics = new Set();
-        clients.forEach(function(c) { if(c.pic) uniquePics.add(c.pic); });
+    function renderPagination(response, containerId) {
+        const div = document.getElementById(containerId);
+        if (!div) return;
 
-        const sel = document.getElementById('filterPic');
-        sel.innerHTML = '<option value="">All PIC</option>';
-        uniquePics.forEach(function(p) {
-            const opt = document.createElement('option');
-            opt.value = p; opt.textContent = p;
-            sel.appendChild(opt);
-        });
-
-        const savedPic = localStorage.getItem('filterPic');
-        if(savedPic) {
-            sel.value = savedPic;
+        if (response.totalPages <= 1) {
+            div.innerHTML = '';
+            return;
         }
+
+        const page = response.page;
+        const total = response.totalPages;
+
+        let html = '<div>Page ' + page + ' of ' + total + ' (' + response.total + ' records)</div>';
+        html += '<div style="display:flex; gap:5px;">';
+
+        if (page > 1) {
+            html += '<button class="btn" onclick="changePage(' + (page - 1) + ')"><i class="fas fa-chevron-left"></i> Prev</button>';
+        } else {
+             html += '<button class="btn" disabled style="opacity:0.5"><i class="fas fa-chevron-left"></i> Prev</button>';
+        }
+
+        if (page < total) {
+            html += '<button class="btn" onclick="changePage(' + (page + 1) + ')">Next <i class="fas fa-chevron-right"></i></button>';
+        } else {
+            html += '<button class="btn" disabled style="opacity:0.5">Next <i class="fas fa-chevron-right"></i></button>';
+        }
+
+        html += '</div>';
+        div.innerHTML = html;
+    }
+
+    function changePage(newPage) {
+        currentParams.page = newPage;
+        fetchClients(false);
     }
 
     function filterClients() {
-        const term = document.getElementById('search').value.toLowerCase();
-        const pic = document.getElementById('filterPic').value;
-        const content = document.getElementById('filterContent').value;
-
-        // Save state
-        localStorage.setItem('search', term);
-        localStorage.setItem('filterPic', pic);
-        localStorage.setItem('filterContent', content);
-
-        const filtered = clients.filter(function(c) {
-            const matchTerm = c.clientName.toLowerCase().includes(term) || c.clientId.toLowerCase().includes(term);
-            const matchPic = !pic || c.pic === pic;
-            const matchContent = !content || c.content === content;
-            return matchTerm && matchPic && matchContent;
-        });
-        renderTable(filtered, 'clientsContent');
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            currentParams.search = document.getElementById('search').value;
+            currentParams.pic = document.getElementById('filterPic').value;
+            currentParams.content = document.getElementById('filterContent').value;
+            fetchClients(true);
+        }, 500); // Debounce
     }
 
     function renderTable(data, containerId, withCheckboxes) {
         if (withCheckboxes === undefined) withCheckboxes = true;
         const div = document.getElementById(containerId);
-        if (!data.length) { div.innerHTML = 'No data.'; return; }
+        if (!data || !data.length) { div.innerHTML = 'No data.'; return; }
 
         let headerCheckbox = withCheckboxes ? '<th style="width:30px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>' : '';
 
@@ -515,7 +525,7 @@
     }
 
     function openFollowup(row) {
-        const c = clients.find(function(x) { return x.row === row; });
+        const c = currentClients.find(function(x) { return x.row === row; });
         if(!c) return;
         document.getElementById('clientIdRow').value = row;
         document.getElementById('followupInfo').innerHTML = '<strong>' + c.clientName + '</strong><br>Last Content: ' + (c.content||'None');
@@ -525,7 +535,7 @@
     }
 
     function viewClientDetails(row) {
-        const c = clients.find(function(x) { return x.row === row; });
+        const c = currentClients.find(function(x) { return x.row === row; });
         if(!c) return;
 
         // Show loading state
@@ -601,8 +611,9 @@
         const handler = google.script.run.withSuccessHandler(function() {
             alert('Saved');
             closeModal('followupModal');
-            loadClients();
+            // Refresh data
             loadDashboard();
+            fetchClients(false); // Reload current page
             selectedRows = [];
             if(document.getElementById('bulkActions')) {
                 document.getElementById('bulkActions').style.display = 'none';
@@ -625,11 +636,22 @@
     }
 
     function openBulkWa() {
-        const due = clients.filter(function(c) {
-            if(!c.nextFollowUp) return false;
-             const d = new Date(c.nextFollowUp); d.setHours(0,0,0,0);
-             const today = new Date(); today.setHours(0,0,0,0);
-             return d.getTime() <= today.getTime() && c.phone;
+        // Note: For bulk WA, we need 'due' clients.
+        // We can't use 'currentClients' because it's paginated.
+        // We should fetch 'due' clients specifically or use the current 'Due' tab view if active.
+
+        // This feature is tricky with server-side pagination.
+        // For now, we'll just show the ones on the current page if in 'Due' tab, or alert user.
+
+        if (currentParams.category !== 'due') {
+            if(!confirm("Switch to 'Due Today' tab to use Bulk WA?")) return;
+            showTab('due');
+            return;
+        }
+
+        // Use current loaded due clients
+        const due = currentClients.filter(function(c) {
+            return c.phone;
         });
 
         let html = '<ul style="list-style:none; padding:0;">';
@@ -642,7 +664,7 @@
              '</li>';
         });
         html += '</ul>';
-        if(due.length === 0) html = '<p>No clients due for follow-up with phone numbers.</p>';
+        if(due.length === 0) html = '<p>No clients with phone numbers on this page.</p>';
         document.getElementById('bulkWaContent').innerHTML = html;
         document.getElementById('bulkWaModal').style.display = 'flex';
     }
@@ -654,6 +676,7 @@
     function showTab(id) {
         const tabs = document.querySelectorAll('.tab-content');
         for (let i = 0; i < tabs.length; i++) {
+            tabs[i].classList.remove('active');
             tabs[i].style.display = 'none';
         }
 
@@ -663,12 +686,31 @@
         }
 
         const targetTab = document.getElementById(id + 'Tab');
-        if (targetTab) targetTab.style.display = 'block';
+        if (targetTab) {
+            targetTab.style.display = 'flex';
+            targetTab.classList.add('active');
+        }
 
         const targetBtn = document.getElementById('btn-' + id);
         if (targetBtn) targetBtn.classList.add('active');
 
         localStorage.setItem('currentTab', id);
+
+        // Logic to switch categories
+        if (id === 'clients') {
+            currentParams.category = 'all';
+            // Move filters to this tab if needed, but for now filters are only in 'clients' tab in HTML.
+            // Actually, filters are only inside #clientsTab in HTML.
+            // If we want filters for other tabs, we need to move the HTML or handle it.
+            // For now, assume filters only apply to "All Clients".
+            fetchClients(true);
+        } else if (id === 'due') {
+            currentParams.category = 'due';
+            fetchClients(true);
+        } else if (id === 'overdue') {
+            currentParams.category = 'overdue';
+            fetchClients(true);
+        }
     }
 
     function exportData() {

@@ -694,3 +694,75 @@ function createDailyReminderTrigger() {
     .everyDays(1)
     .create();
 }
+
+function searchClients(params) {
+  // Use simple mode to avoid building large follow-up arrays
+  const clients = getAllClients(true);
+
+  let filtered = clients;
+
+  // 1. Filter by Category (Tab)
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  if (params.category === 'due') {
+    filtered = filtered.filter(c => {
+       if(!c.nextFollowUp) return false;
+       const d = new Date(c.nextFollowUp); d.setHours(0,0,0,0);
+       return d.getTime() <= today.getTime();
+    });
+  } else if (params.category === 'overdue') {
+    filtered = filtered.filter(c => c.overdueFollowUps > 0);
+  }
+
+  // 2. Filter by Search Term
+  if (params.search) {
+    const term = params.search.toLowerCase();
+    filtered = filtered.filter(c =>
+      (c.clientName && c.clientName.toLowerCase().includes(term)) ||
+      (c.clientId && c.clientId.toString().toLowerCase().includes(term))
+    );
+  }
+
+  // 3. Filter by PIC
+  if (params.pic) {
+    filtered = filtered.filter(c => c.pic === params.pic);
+  }
+
+  // 4. Filter by Content
+  if (params.content) {
+    filtered = filtered.filter(c => c.content === params.content);
+  }
+
+  // 5. Pagination
+  const total = filtered.length;
+  const page = parseInt(params.page) || 1;
+  const pageSize = parseInt(params.pageSize) || 20;
+  const totalPages = Math.ceil(total / pageSize);
+  const startIndex = (page - 1) * pageSize;
+  const paginatedData = filtered.slice(startIndex, startIndex + pageSize);
+
+  const resultData = paginatedData.map(c => {
+    return {
+      row: c.row,
+      clientId: c.clientId,
+      clientName: c.clientName,
+      phone: c.phone,
+      pic: c.pic,
+      content: c.content,
+      latestFeedback: c.latestFeedback,
+      nextFollowUp: c.nextFollowUp ? c.nextFollowUp.toISOString() : null, // ISO String for safety
+      overdueFollowUps: c.overdueFollowUps,
+      status: c.status,
+      // Pass necessary flags for frontend
+      isDue: (c.nextFollowUp && new Date(c.nextFollowUp) <= today)
+    };
+  });
+
+  return {
+    data: resultData,
+    total: total,
+    page: page,
+    totalPages: totalPages
+  };
+}
