@@ -68,11 +68,13 @@ function checkAndRepairHeaders() {
     const headers = generateHeaders();
     const requiredCols = headers.length;
 
+    // Ensure we have enough columns
     if (sheet.getMaxColumns() < requiredCols) {
       sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
     }
 
     // Check and Fix Headers if they don't match exactly
+    // This is the final pass to label columns correctly after structural repairs
     const currentHeaders = sheet.getRange(1, 1, 1, requiredCols).getValues()[0];
     let needsUpdate = false;
     for (let i = 0; i < headers.length; i++) {
@@ -127,35 +129,61 @@ function safeMigrateData(sheet) {
     const lastCol = sheet.getLastColumn();
     if (lastCol === 0) return;
 
-    // Check for "Progress" column at Index 10 (Column 11/K)
-    let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    // 1. Delete Progress Column if it exists at Index 10 (Column 11)
+    let headers = sheet.getRange(1, 1, 1, Math.max(lastCol, 20)).getValues()[0];
 
-    // AGGRESSIVE CHECK: If "Progress" exists at col 11, delete it.
+    // Check specifically for "Progress" at column 11 (index 10)
+    // If it exists, we delete it to align K with Follow Up Date 1
     if (headers.length > 10 && (headers[10] === 'Progress' || headers[10] === 'J')) {
         Logger.log("Permanent Fix: Deleting 'Progress' column...");
-        sheet.deleteColumn(11); // Delete Column K
-        // Refresh headers
+        sheet.deleteColumn(11);
+        SpreadsheetApp.flush();
         headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     }
 
-    // Check for missing "Content" columns
-    for (let i = 1; i <= CONFIG.MAX_FOLLOW_UPS; i++) {
-        const dateColIdx = 11 + (i - 1) * 3; // 1-based
-        const feedColIdx = 12 + (i - 1) * 3;
-        const contColIdx = 13 + (i - 1) * 3;
+    // 2. Enforce Triplet Structure: [Date, Feedback, Content]
+    // We expect:
+    // Col 11 (idx 10): Follow Up Date 1
+    // Col 12 (idx 11): Feedback 1
+    // Col 13 (idx 12): Content 1
+    // Col 14 (idx 13): Follow Up Date 2
+    // ...
+    // If we find a Date column where a Feedback column should be, we insert Feedback (and push Date right).
 
-        if (headers.length < contColIdx - 1) {
-           // Header missing, likely need extension, handled by standard repair
-        } else {
-            const currentHeader = headers[contColIdx - 1];
-            if (currentHeader !== `Content ${i}`) {
-                Logger.log(`Permanent Fix: Inserting 'Content ${i}' at Column ${contColIdx}...`);
-                // If the column there isn't Content i, we assume it's missing and we need to insert it
-                // Logic: Date i, Feedback i are present. Insert Content i after Feedback i.
-                sheet.insertColumnAfter(feedColIdx);
-                sheet.getRange(1, contColIdx).setValue(`Content ${i}`);
-                headers.splice(contColIdx - 1, 0, `Content ${i}`);
-            }
+    for (let i = 1; i <= CONFIG.MAX_FOLLOW_UPS; i++) {
+        const dateColIdx = 11 + (i - 1) * 3;
+        const feedColIdx = dateColIdx + 1;
+        const contColIdx = dateColIdx + 2;
+
+        // Re-read headers to handle shifts
+        const currentHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn() + 2).getValues()[0];
+
+        // Check Feedback Column
+        // We check if the column at 'feedColIdx' is actually 'Feedback i'.
+        // If it looks like a Date (e.g. 'Follow Up Date ...') or is missing/wrong, we insert.
+        // But if it's already 'Feedback i', we skip.
+
+        const actualFeedHeader = currentHeaders[feedColIdx - 1] || '';
+        const isFeedback = actualFeedHeader.toLowerCase().includes('feedback') && actualFeedHeader.includes(i.toString());
+
+        if (!isFeedback) {
+             Logger.log(`Inserting Feedback ${i} at column ${feedColIdx}`);
+             sheet.insertColumnAfter(dateColIdx);
+             sheet.getRange(1, feedColIdx).setValue(`Feedback ${i}`);
+             SpreadsheetApp.flush();
+        }
+
+        // Check Content Column
+        // Re-read headers again because we might have inserted Feedback
+        const currentHeaders2 = sheet.getRange(1, 1, 1, sheet.getLastColumn() + 2).getValues()[0];
+        const actualContHeader = currentHeaders2[contColIdx - 1] || '';
+        const isContent = actualContHeader.toLowerCase().includes('content') && actualContHeader.includes(i.toString());
+
+        if (!isContent) {
+             Logger.log(`Inserting Content ${i} at column ${contColIdx}`);
+             sheet.insertColumnAfter(feedColIdx);
+             sheet.getRange(1, contColIdx).setValue(`Content ${i}`);
+             SpreadsheetApp.flush();
         }
     }
 }
@@ -197,15 +225,12 @@ function getAllClients() {
   if (lastRow <= 1) return [];
 
   const totalCols = 10 + (CONFIG.MAX_FOLLOW_UPS * 3);
-  // Ensure we don't read beyond existing columns if sheet is small (though checkHeaders should fix it)
   const actualCols = Math.min(totalCols, sheet.getLastColumn());
 
-  // Use try-catch for data reading
   try {
       const data = sheet.getRange(2, 1, lastRow-1, actualCols).getValues();
 
       const clients = data.map((row, index) => {
-        // Collect all follow-up dates, feedback, and content
         const followUps = [];
         let latestFollowUpDate = null;
         let latestFeedback = '';
@@ -216,7 +241,6 @@ function getAllClients() {
           const feedbackColIdx = dateColIdx + 1;
           const contentColIdx = dateColIdx + 2;
 
-          // Safety check for indices
           if (dateColIdx >= row.length) break;
 
           const dateVal = row[dateColIdx];
@@ -238,7 +262,6 @@ function getAllClients() {
           }
         }
 
-        // Find next follow-up date logic
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
@@ -311,14 +334,12 @@ function getClientsNeedingFollowup() {
 
 // Helper function to save a single follow-up
 function saveFollowupInternal(sheet, clientRow, followupData) {
-  // Find the next empty follow-up slot
   let dateColumn = null;
   let feedbackColumn = null;
   let contentColumn = null;
 
   for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
     const colIdx = COLUMNS.FOLLOW_UP_START + (i * 3);
-    // Ensure column exists
     if (colIdx + 3 > sheet.getMaxColumns()) {
        sheet.insertColumnsAfter(sheet.getMaxColumns(), (colIdx + 3) - sheet.getMaxColumns());
     }
@@ -339,21 +360,17 @@ function saveFollowupInternal(sheet, clientRow, followupData) {
     contentColumn = lastIdx + 3;
   }
 
-  // Record Date, Feedback, Content
   const followupDate = new Date(followupData.date);
   sheet.getRange(clientRow, dateColumn).setValue(followupDate);
   sheet.getRange(clientRow, feedbackColumn).setValue(followupData.notes);
 
-  // Handle content (mapped from progress if needed)
   const contentToSave = followupData.content || followupData.progress;
   sheet.getRange(clientRow, contentColumn).setValue(contentToSave);
 
-  // Update status
   if (followupData.status) {
     sheet.getRange(clientRow, COLUMNS.STATUS + 1).setValue(followupData.status);
   }
 
-  // Log the follow-up activity
   logFollowupActivity({
     clientId: sheet.getRange(clientRow, COLUMNS.CLIENT_ID + 1).getValue(),
     clientName: sheet.getRange(clientRow, COLUMNS.CLIENT_NAME + 1).getValue(),
@@ -365,42 +382,32 @@ function saveFollowupInternal(sheet, clientRow, followupData) {
     content: followupData.content
   });
 
-  // Send email notification if requested
   if (followupData.sendEmail) {
     sendFollowupNotification(sheet, clientRow, followupData);
   }
 }
 
-// Record a new follow-up (Single)
 function recordFollowup(clientRow, followupData) {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
-
   saveFollowupInternal(sheet, clientRow, followupData);
-
   SpreadsheetApp.flush();
-
   return { success: true };
 }
 
-// Record bulk follow-up
 function recordBulkFollowup(clientRows, followupData) {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
-
   for (let i = 0; i < clientRows.length; i++) {
     saveFollowupInternal(sheet, clientRows[i], followupData);
   }
-
   SpreadsheetApp.flush();
   return { success: true, count: clientRows.length };
 }
 
-// Log follow-up activity in a separate sheet
 function logFollowupActivity(activity) {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   let logSheet = ss.getSheetByName('Follow-up Log');
-
   if (!logSheet) {
     logSheet = ss.insertSheet('Follow-up Log');
     logSheet.getRange(1, 1, 1, 9).setValues([[
@@ -423,7 +430,6 @@ function logFollowupActivity(activity) {
   ]);
 }
 
-// Send follow-up notification email
 function sendFollowupNotification(sheet, clientRow, followupData) {
   const clientData = {
     name: sheet.getRange(clientRow, COLUMNS.CLIENT_NAME + 1).getValue(),
@@ -453,13 +459,11 @@ function sendFollowupNotification(sheet, clientRow, followupData) {
   });
 }
 
-// Get dashboard statistics
 function getDashboardStats() {
   const clients = getAllClients();
   const dueClients = getClientsNeedingFollowup();
   const overdueClients = clients.filter(client => client.overdueFollowUps > 0);
 
-  // Helper for counting
   const countBy = (items, keyFn) => {
     const counts = {};
     items.forEach(item => {
@@ -469,7 +473,6 @@ function getDashboardStats() {
     return counts;
   };
 
-  // Helper for aggregation
   const aggregate = (keyFn) => {
     const groups = {};
     clients.forEach(client => {
@@ -496,7 +499,6 @@ function getDashboardStats() {
       g.feedback[f] = (g.feedback[f] || 0) + 1;
     });
 
-    // Add Contribution %
     Object.values(groups).forEach(g => {
        g.contribution = g.total > 0 ? ((g.followedUp / g.total) * 100).toFixed(1) : 0;
     });
@@ -520,7 +522,6 @@ function getDashboardStats() {
   return stats;
 }
 
-// Get follow-up history for a client
 function getClientFollowupHistory(clientRow) {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
@@ -546,13 +547,11 @@ function getClientFollowupHistory(clientRow) {
   return followUps;
 }
 
-// Helper function to format dates
 function formatDate(date) {
   if (!date) return 'Not scheduled';
   return Utilities.formatDate(new Date(date), Session.getScriptTimeZone(), 'MMM dd, yyyy');
 }
 
-// Export data
 function exportClientData() {
   const clients = getAllClients();
   const headers = [
@@ -581,13 +580,11 @@ function exportClientData() {
   };
 }
 
-// Schedule daily reminders
 function scheduleDailyReminders() {
   const clients = getClientsNeedingFollowup();
 
   if (clients.length === 0) return { sent: 0 };
 
-  // Group by PIC
   const clientsByPIC = {};
   clients.forEach(client => {
     const pic = client.pic || Session.getActiveUser().getEmail();
@@ -595,7 +592,6 @@ function scheduleDailyReminders() {
     clientsByPIC[pic].push(client);
   });
 
-  // Send email to each PIC
   Object.keys(clientsByPIC).forEach(pic => {
     const picClients = clientsByPIC[pic];
     const subject = `Follow-up Reminder: ${picClients.length} clients need attention`;
@@ -651,9 +647,7 @@ function scheduleDailyReminders() {
   return { sent: Object.keys(clientsByPIC).length };
 }
 
-// Create daily reminder trigger
 function createDailyReminderTrigger() {
-  // Remove existing triggers
   const triggers = ScriptApp.getProjectTriggers();
   triggers.forEach(trigger => {
     if (trigger.getHandlerFunction() === 'scheduleDailyReminders') {
@@ -661,7 +655,6 @@ function createDailyReminderTrigger() {
     }
   });
 
-  // Create new trigger for 8 AM daily
   ScriptApp.newTrigger('scheduleDailyReminders')
     .timeBased()
     .atHour(8)
