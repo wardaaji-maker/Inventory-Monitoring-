@@ -67,17 +67,6 @@
       margin: 10px 0;
     }
 
-    .stat-trend {
-      font-size: 0.9em;
-      padding: 3px 8px;
-      border-radius: 12px;
-      display: inline-block;
-      width: fit-content;
-    }
-
-    .trend-up { background: #d4edda; color: #155724; }
-    .trend-down { background: #f8d7da; color: #721c24; }
-
     .content {
       display: flex;
       gap: 20px;
@@ -203,68 +192,80 @@
       border-radius: 50%;
     }
 
-    /* Filter Panel */
-    .filter-panel {
-      background: #f8f9fa;
-      padding: 15px;
-      border-radius: 10px;
-      margin-bottom: 20px;
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 15px;
+    /* Toggle Switch */
+    .toggle-container {
+        display: flex;
+        background: #f1f3f5;
+        padding: 5px;
+        border-radius: 8px;
+        width: fit-content;
+        margin-bottom: 20px;
     }
 
-    .filter-group {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    .toggle-btn {
+        padding: 8px 16px;
+        border: none;
+        background: none;
+        cursor: pointer;
+        border-radius: 6px;
+        font-weight: 500;
+        color: #666;
+        transition: all 0.2s;
     }
 
-    .filter-label {
-      font-weight: 600;
-      color: var(--dark);
-      font-size: 0.9em;
+    .toggle-btn.active {
+        background: white;
+        color: var(--primary);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
 
-    /* Enhanced Table */
-    .data-table-container { flex: 1; overflow-y: auto; position: relative; min-height: 200px; }
-
-    .enhanced-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
+    /* Detail Card */
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 15px;
     }
 
-    .enhanced-table th {
-      background: #f8f9fa;
-      padding: 15px;
-      text-align: left;
-      font-weight: 600;
-      color: var(--dark);
-      border-bottom: 2px solid #dee2e6;
-      position: sticky; top: 0; z-index: 10;
+    .detail-card {
+        background: white;
+        border: 1px solid #eee;
+        border-radius: 10px;
+        padding: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
-    .enhanced-table td {
-      padding: 12px 15px;
-      border-bottom: 1px solid #eee;
+    .detail-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #f8f9fa;
+        padding-bottom: 10px;
     }
 
-    .enhanced-table tr:hover {
-      background: #f8f9fa;
+    .detail-title {
+        font-weight: bold;
+        color: var(--dark);
+        font-size: 1.1em;
     }
 
-    .status-badge {
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 0.8em;
-      font-weight: 500;
+    .detail-stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 10px;
+        gap: 10px;
     }
 
-    .badge-success { background: #d4edda; color: #155724; }
-    .badge-warning { background: #fff3cd; color: #856404; }
-    .badge-danger { background: #f8d7da; color: #721c24; }
-    .badge-info { background: #d1ecf1; color: #0c5460; }
+    .detail-stat-box {
+        flex: 1;
+        background: #f8f9fa;
+        padding: 8px;
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    .detail-stat-val { font-weight: bold; font-size: 1.2em; }
+    .detail-stat-lbl { font-size: 0.75em; color: #666; }
 
     /* Loading Animation */
     .loading-spinner {
@@ -285,13 +286,23 @@
     .pagination { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee; }
     .loading-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.7); display: flex; align-items: center; justify-content: center; z-index: 10; display: none; }
 
-    /* Modal Styles */
+    /* Modal & Table Styles (kept from previous) */
     .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
     .modal-content { background: white; padding: 30px; border-radius: 10px; width: 600px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
     .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-
+    .data-table-container { flex: 1; overflow-y: auto; position: relative; min-height: 200px; }
+    .enhanced-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .enhanced-table th { background: #f8f9fa; padding: 15px; text-align: left; font-weight: 600; color: var(--dark); border-bottom: 2px solid #dee2e6; position: sticky; top: 0; z-index: 10; }
+    .enhanced-table td { padding: 12px 15px; border-bottom: 1px solid #eee; }
+    .enhanced-table tr:hover { background: #f8f9fa; }
+    .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.8em; font-weight: 500; }
+    .badge-success { background: #d4edda; color: #155724; }
+    .badge-warning { background: #fff3cd; color: #856404; }
+    .badge-danger { background: #f8d7da; color: #721c24; }
+    .badge-info { background: #d1ecf1; color: #0c5460; }
+    .btn { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; }
 
     /* Responsive */
     @media (max-width: 768px) {
@@ -299,9 +310,6 @@
       .content { flex-direction: column; }
       .sidebar { width: 100%; }
       .dashboard-grid { grid-template-columns: 1fr; }
-      .filter-panel { grid-template-columns: 1fr; }
-
-      /* Mobile List View */
       .enhanced-table { display: none; }
       .mobile-list { display: block; }
       .mobile-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #eee; }
@@ -355,15 +363,24 @@
           <i class="fas fa-exclamation-triangle"></i> Overdue
           <span id="overdueBadge" style="margin-left:auto; background:var(--danger); color:white; padding:2px 8px; border-radius:10px; font-size:0.8em;">0</span>
         </button>
-        <!-- Removed extra analytics tabs for now as per backend support -->
       </div>
 
       <div class="main-content">
         <!-- Dashboard Tab -->
         <div id="dashboardTab" class="tab-content active">
-          <h2 style="color:var(--dark); margin-bottom:20px;">Dashboard Overview</h2>
+          <!-- Summary Section (Top) -->
+          <h2 style="color:var(--dark); margin-bottom:15px;">Summary Results</h2>
+          <div id="dashboardSummary"></div>
 
-          <div id="dashboardContent" style="overflow-y:auto;"></div>
+          <!-- Detail Section (Main) -->
+          <h2 style="color:var(--dark); margin-top:30px; margin-bottom:15px;">Performance Details</h2>
+
+          <div class="toggle-container">
+              <button class="toggle-btn active" id="togglePic" onclick="togglePerformance('pic')">By PIC</button>
+              <button class="toggle-btn" id="toggleStore" onclick="togglePerformance('store')">By Showroom</button>
+          </div>
+
+          <div id="performanceDetails" class="detail-grid"></div>
         </div>
 
         <!-- Clients Tab -->
@@ -483,11 +500,11 @@
   </div>
 
   <script>
-    let currentClients = []; // Holds current page data
+    let currentClients = [];
     let dashboardStats = {};
     let selectedRows = [];
     let currentParams = {
-        category: 'all', // all, due, overdue
+        category: 'all',
         search: '',
         pic: '',
         content: '',
@@ -495,6 +512,7 @@
         pageSize: 20
     };
     let searchTimeout = null;
+    let performanceView = 'pic'; // 'pic' or 'store'
 
     function init() {
       console.log("Initializing application...");
@@ -505,13 +523,11 @@
             fDateInput.valueAsDate = new Date();
         }
 
-        // Load data in sequence
         loadPromotions()
             .then(() => loadDashboard())
             .then(() => {
                 document.getElementById('app-loading').style.display = 'none';
                 console.log("Application loaded successfully");
-                // Restore state
                 const savedTab = localStorage.getItem('currentTab') || 'dashboard';
                 showTab(savedTab);
             })
@@ -526,7 +542,6 @@
                     '</div>';
             });
 
-        // Set up form submission
         document.getElementById('followupForm').onsubmit = function(e) {
             e.preventDefault();
             saveFollowup();
@@ -543,7 +558,6 @@
           .withSuccessHandler(types => {
             const modalSelect = document.getElementById('fContent');
             const filterSelect = document.getElementById('filterContent');
-            // const dashboardSelect = document.getElementById('dashboardContentFilter'); // Removed extra filters for now
 
             modalSelect.innerHTML = '<option value="">-- Select Promotion --</option>';
             filterSelect.innerHTML = '<option value="">All Content</option>';
@@ -568,7 +582,7 @@
             dashboardStats = stats;
             renderDashboard(stats);
 
-            // Populate PIC filters from stats if available
+            // Populate PIC filters from stats
             if (stats.picStats) {
                  const sel = document.getElementById('filterPic');
                  sel.innerHTML = '<option value="">All PIC</option>';
@@ -577,7 +591,6 @@
                         sel.add(new Option(p, p));
                     }
                  });
-                 // Also restore saved filter
                  const savedPic = localStorage.getItem('filterPic');
                  if (savedPic) document.getElementById('filterPic').value = savedPic;
             }
@@ -590,7 +603,7 @@
     }
 
     function renderDashboard(stats) {
-      // Update stats grid
+      // 1. Stats Grid (Update Avg to %)
       document.getElementById('statsGrid').innerHTML =
         '<div class="stat-card" style="border-left: 4px solid var(--primary);">' +
           '<div style="font-size: 0.9em; color: #666; display: flex; align-items: center; gap: 8px;">' +
@@ -618,171 +631,101 @@
 
         '<div class="stat-card" style="border-left: 4px solid var(--success);">' +
           '<div style="font-size: 0.9em; color: #666; display: flex; align-items: center; gap: 8px;">' +
-            '<i class="fas fa-chart-line"></i> Avg Follow-ups' +
+            '<i class="fas fa-chart-line"></i> Follow-up Rate' +
           '</div>' +
-          '<div class="stat-value">' + stats.avgFollowUps + '</div>' +
-          '<div style="font-size: 0.85em; color: #888;">Per client average</div>' +
+          '<div class="stat-value">' + (stats.followUpRate || 0) + '%</div>' +
+          '<div style="font-size: 0.85em; color: #888;">Clients with >= 1 follow-up</div>' +
         '</div>';
 
       // Update badge counts
       document.getElementById('dueBadge').textContent = stats.dueFollowups;
       document.getElementById('overdueBadge').textContent = stats.overdueClients;
 
-      // Render dashboard content with charts
-      renderDashboardCharts(stats);
+      // 2. Summary Section (Charts)
+      renderSummaryCharts(stats);
+
+      // 3. Performance Details (PIC/Store)
+      togglePerformance('pic'); // Default to PIC
     }
 
-    function renderDashboardCharts(stats) {
-      const colors = [
-        '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
-        '#1abc9c', '#d35400', '#c0392b', '#16a085', '#8e44ad'
-      ];
+    function renderSummaryCharts(stats) {
+      const colors = ['#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6', '#1abc9c', '#d35400', '#c0392b', '#16a085', '#8e44ad'];
 
-      let html =
-        '<div class="dashboard-grid">' +
-          '<!-- Content Distribution -->' +
-          '<div class="chart-card">' +
-            '<div class="chart-header">' +
-              '<div class="chart-title">Content Distribution</div>' +
-              '<div style="font-size: 0.9em; color: #666;">' + Object.keys(stats.contentCounts).length + ' types</div>' +
-            '</div>' +
-            '<div class="chart-container">';
+      let html = '<div class="dashboard-grid">';
 
-      // Content distribution
-      const contentData = Object.entries(stats.contentCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8);
-
+      // Content Distribution
+      html += '<div class="chart-card"><div class="chart-header"><div class="chart-title">Content Distribution</div><div style="font-size: 0.9em; color: #666;">' + Object.keys(stats.contentCounts).length + ' types</div></div><div class="chart-container">';
+      const contentData = Object.entries(stats.contentCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
       contentData.forEach(([content, count], index) => {
         const percentage = (count / stats.totalClients * 100).toFixed(1);
-        html +=
-          '<div class="metric-item">' +
-            '<div class="metric-label">' +
-              '<div class="metric-color" style="background: ' + colors[index % colors.length] + ';"></div>' +
-              '<span>' + (content || 'No Content') + '</span>' +
-            '</div>' +
-            '<div style="display: flex; align-items: center; gap: 15px;">' +
-              '<span style="font-weight: 600;">' + count + '</span>' +
-              '<span style="color: #666; font-size: 0.9em;">' + percentage + '%</span>' +
-            '</div>' +
-          '</div>' +
-          '<div class="progress-bar">' +
-            '<div class="progress-fill" style="width: ' + percentage + '%; background: ' + colors[index % colors.length] + ';"></div>' +
-          '</div>';
+        html += '<div class="metric-item"><div class="metric-label"><div class="metric-color" style="background: ' + colors[index % colors.length] + ';"></div><span>' + (content || 'No Content') + '</span></div><div style="display: flex; align-items: center; gap: 15px;"><span style="font-weight: 600;">' + count + '</span><span style="color: #666; font-size: 0.9em;">' + percentage + '%</span></div></div><div class="progress-bar"><div class="progress-fill" style="width: ' + percentage + '%; background: ' + colors[index % colors.length] + ';"></div></div>';
       });
+      html += '</div></div>';
 
-      html +=
-            '</div>' +
-          '</div>' +
-
-          '<!-- Feedback Analysis -->' +
-          '<div class="chart-card">' +
-            '<div class="chart-header">' +
-              '<div class="chart-title">Feedback Analysis</div>' +
-              '<div style="font-size: 0.9em; color: #666;">Latest feedback status</div>' +
-            '</div>' +
-            '<div class="chart-container">';
-
-      // Feedback analysis
-      const feedbackData = Object.entries(stats.feedbackCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 8);
-
+      // Feedback Analysis
+      html += '<div class="chart-card"><div class="chart-header"><div class="chart-title">Feedback Analysis</div><div style="font-size: 0.9em; color: #666;">Latest feedback status</div></div><div class="chart-container">';
+      const feedbackData = Object.entries(stats.feedbackCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
       feedbackData.forEach(([feedback, count], index) => {
         const percentage = (count / stats.totalClients * 100).toFixed(1);
-        const color = feedback.toLowerCase().includes('positive') ? colors[1] :
-                     feedback.toLowerCase().includes('negative') ? colors[2] :
-                     feedback.toLowerCase().includes('pending') ? colors[3] :
-                     colors[index % colors.length];
-
-        html +=
-          '<div class="metric-item">' +
-            '<div class="metric-label">' +
-              '<div class="metric-color" style="background: ' + color + ';"></div>' +
-              '<span style="font-size: 0.9em;">' + (feedback || 'No Feedback') + '</span>' +
-            '</div>' +
-            '<div style="display: flex; align-items: center; gap: 15px;">' +
-              '<span style="font-weight: 600;">' + count + '</span>' +
-              '<span style="color: #666; font-size: 0.9em;">' + percentage + '%</span>' +
-            '</div>' +
-          '</div>';
+        html += '<div class="metric-item"><div class="metric-label"><div class="metric-color" style="background: ' + colors[index % colors.length] + ';"></div><span style="font-size: 0.9em;">' + (feedback || 'No Feedback') + '</span></div><div style="display: flex; align-items: center; gap: 15px;"><span style="font-weight: 600;">' + count + '</span><span style="color: #666; font-size: 0.9em;">' + percentage + '%</span></div></div>';
       });
+      html += '</div></div>';
 
-      html +=
-            '</div>' +
-          '</div>' +
+      html += '</div>';
+      document.getElementById('dashboardSummary').innerHTML = html;
+    }
 
-          '<!-- PIC Performance -->' +
-          '<div class="chart-card">' +
-            '<div class="chart-header">' +
-              '<div class="chart-title">PIC Performance</div>' +
-              '<div style="font-size: 0.9em; color: #666;">Follow-up completion rate</div>' +
-            '</div>' +
-            '<div class="chart-container">';
+    function togglePerformance(view) {
+        performanceView = view;
+        document.getElementById('togglePic').classList.toggle('active', view === 'pic');
+        document.getElementById('toggleStore').classList.toggle('active', view === 'store');
+        renderPerformanceDetails();
+    }
 
-      // PIC performance
-      const picData = Object.entries(stats.picStats || {})
-        .sort((a, b) => b[1].contribution - a[1].contribution)
-        .slice(0, 6);
+    function renderPerformanceDetails() {
+        const data = performanceView === 'pic' ? dashboardStats.picStats : dashboardStats.storeStats;
+        const container = document.getElementById('performanceDetails');
 
-      picData.forEach(([pic, data], index) => {
-        html +=
-          '<div class="metric-item">' +
-            '<div class="metric-label">' +
-              '<div class="metric-color" style="background: ' + colors[index % colors.length] + ';"></div>' +
-              '<span style="font-size: 0.9em;">' + (pic || 'Unassigned') + '</span>' +
-            '</div>' +
-            '<div style="text-align: right;">' +
-              '<div style="font-weight: 600; font-size: 1.1em;">' + data.contribution + '%</div>' +
-              '<div style="font-size: 0.8em; color: #666;">' + data.followedUp + '/' + data.total + '</div>' +
-            '</div>' +
-          '</div>' +
-          '<div class="progress-bar">' +
-            '<div class="progress-fill" style="width: ' + data.contribution + '%; background: ' + colors[index % colors.length] + ';"></div>' +
-          '</div>';
-      });
+        if (!data || Object.keys(data).length === 0) {
+            container.innerHTML = '<p>No data available</p>';
+            return;
+        }
 
-      html +=
-            '</div>' +
-          '</div>' +
+        let html = '';
+        Object.entries(data).forEach(([name, stats]) => {
+            if (name === 'Unassigned' && stats.total === 0) return;
 
-          '<!-- Store Performance -->' +
-          '<div class="chart-card">' +
-            '<div class="chart-header">' +
-              '<div class="chart-title">Store Performance</div>' +
-              '<div style="font-size: 0.9em; color: #666;">By store code</div>' +
-            '</div>' +
-            '<div class="chart-container">';
+            // Calc stats
+            const rate = stats.contribution || 0;
+            const topContent = Object.entries(stats.content).sort((a,b) => b[1] - a[1]).slice(0, 2).map(e => e[0] + ' (' + e[1] + ')').join(', ') || 'None';
+            const topFeedback = Object.entries(stats.feedback).sort((a,b) => b[1] - a[1]).slice(0, 2).map(e => e[0] + ' (' + e[1] + ')').join(', ') || 'None';
 
-      // Store performance
-      const storeData = Object.entries(stats.storeStats || {})
-        .sort((a, b) => b[1].total - a[1].total)
-        .slice(0, 6);
+            html += '<div class="detail-card">';
+            html +=   '<div class="detail-header">';
+            html +=     '<div class="detail-title">' + name + '</div>';
+            html +=     '<div class="status-badge badge-info">' + stats.total + ' Leads</div>';
+            html +=   '</div>';
 
-      storeData.forEach(([store, data], index) => {
-        const color = data.contribution > 70 ? colors[1] :
-                     data.contribution > 40 ? colors[3] :
-                     colors[2];
+            html +=   '<div style="margin-bottom:10px;">';
+            html +=     '<div style="display:flex; justify-content:space-between; font-size:0.85em; margin-bottom:5px;"><span>Follow-up Rate</span><span>' + rate + '%</span></div>';
+            html +=     '<div class="progress-bar" style="margin:0;"><div class="progress-fill" style="width:' + rate + '%; background:var(--success);"></div></div>';
+            html +=   '</div>';
 
-        html +=
-          '<div class="metric-item">' +
-            '<div class="metric-label">' +
-              '<div class="metric-color" style="background: ' + color + ';"></div>' +
-              '<span style="font-size: 0.9em;">' + (store || 'Unknown') + '</span>' +
-            '</div>' +
-            '<div style="text-align: right;">' +
-              '<div style="font-weight: 600;">' + data.contribution + '%</div>' +
-              '<div style="font-size: 0.8em; color: #666;">Follow-up rate</div>' +
-            '</div>' +
-          '</div>';
-      });
+            html +=   '<div class="detail-stat-row">';
+            html +=     '<div class="detail-stat-box"><div class="detail-stat-val" style="color:var(--warning);">' + (stats.due || 0) + '</div><div class="detail-stat-lbl">Due Today</div></div>';
+            html +=     '<div class="detail-stat-box"><div class="detail-stat-val" style="color:var(--danger);">' + (stats.overdue || 0) + '</div><div class="detail-stat-lbl">Overdue</div></div>';
+            html +=     '<div class="detail-stat-box"><div class="detail-stat-val" style="color:var(--primary);">' + (stats.followedUp || 0) + '</div><div class="detail-stat-lbl">Done</div></div>';
+            html +=   '</div>';
 
-      html +=
-            '</div>' +
-          '</div>' +
-        '</div>';
+            html +=   '<div style="margin-top:15px; font-size:0.85em; color:#666;">';
+            html +=     '<div style="margin-bottom:5px;"><strong>Top Content:</strong> ' + topContent + '</div>';
+            html +=     '<div><strong>Top Feedback:</strong> ' + topFeedback + '</div>';
+            html +=   '</div>';
 
-      document.getElementById('dashboardContent').innerHTML = html;
+            html += '</div>';
+        });
+
+        container.innerHTML = html;
     }
 
     // Server-Side Pagination Logic
@@ -991,7 +934,6 @@
       }
     }
 
-    // Tab Switching Logic
     function showTab(id) {
         const tabs = document.querySelectorAll('.tab-content');
         for (let i = 0; i < tabs.length; i++) {
@@ -1028,7 +970,6 @@
         }
     }
 
-    // Original Helper Functions (Select, Modal, Followup, Export)
     function toggleSelectAll() {
         const main = document.getElementById('selectAll');
         const boxes = document.querySelectorAll('.client-checkbox');
@@ -1077,55 +1018,8 @@
         document.getElementById('followupModal').style.display = 'flex';
     }
 
-    function saveFollowup() {
-        const rowVal = document.getElementById('clientIdRow').value;
-        let isBulk = false;
-        let rows = [];
-
-        try {
-            if (rowVal.startsWith('[')) {
-                rows = JSON.parse(rowVal);
-                isBulk = true;
-            } else {
-                rows = [parseInt(rowVal)];
-            }
-        } catch(e) {
-            rows = [parseInt(rowVal)];
-        }
-
-        const data = {
-            date: document.getElementById('fDate').value,
-            type: document.getElementById('fType').value,
-            content: document.getElementById('fContent').value,
-            notes: document.getElementById('fNotes').value,
-            sendEmail: document.getElementById('fEmail').checked
-        };
-
-        google.script.run.withSuccessHandler(function() {
-            alert('Saved');
-            closeModal('followupModal');
-            loadDashboard(); // Refresh stats
-            fetchClients(false); // Reload current page
-            selectedRows = [];
-            if(document.getElementById('bulkActions')) {
-                document.getElementById('bulkActions').style.display = 'none';
-            }
-        }).recordFollowup(rows[0], data);
-
-        // Note: Bulk logic would need recordBulkFollowup support, assuming it exists or single call
-        if(isBulk) {
-             google.script.run.recordBulkFollowup(rows, data);
-        } else {
-             // Already called above, actually I need to fix this double call logic
-        }
-    }
-
-    // Fix saveFollowup Logic
-    document.getElementById('followupForm').onsubmit = function(e) { e.preventDefault(); }; // Clear old listener
-    // Re-bind properly
-
     // Override saveFollowup properly
-    saveFollowup = function() {
+    function saveFollowup() {
         const rowVal = document.getElementById('clientIdRow').value;
         let isBulk = false;
         let rows = [];

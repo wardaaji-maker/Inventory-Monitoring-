@@ -493,8 +493,15 @@ function sendFollowupNotification(sheet, clientRow, followupData) {
 
 function getDashboardStats() {
   const clients = getAllClients();
-  const dueClients = getClientsNeedingFollowup();
-  const overdueClients = clients.filter(client => client.overdueFollowUps > 0);
+
+  // Calculate specific "Due" status for dashboard consistency
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Basic Counters
+  let dueFollowups = 0;
+  let overdueClients = 0;
+  let clientsWithFollowUp = 0;
 
   const countBy = (items, keyFn) => {
     const counts = {};
@@ -514,6 +521,7 @@ function getDashboardStats() {
            total: 0,
            followedUp: 0,
            overdue: 0,
+           due: 0, // Add due count
            content: {},
            feedback: {}
         };
@@ -521,8 +529,22 @@ function getDashboardStats() {
 
       const g = groups[key];
       g.total++;
-      if (client.totalFollowUps > 0) g.followedUp++;
+
+      // Follow-up Rate logic: > 0 followups
+      if (client.totalFollowUps > 0) {
+          g.followedUp++;
+      }
+
       if (client.overdueFollowUps > 0) g.overdue++;
+
+      // Check Due Today
+      if (client.nextFollowUp) {
+          const nextDate = new Date(client.nextFollowUp);
+          nextDate.setHours(0,0,0,0);
+          if (nextDate.getTime() <= today.getTime()) {
+              g.due++;
+          }
+      }
 
       const c = client.content || 'No Content';
       g.content[c] = (g.content[c] || 0) + 1;
@@ -532,23 +554,36 @@ function getDashboardStats() {
     });
 
     Object.values(groups).forEach(g => {
+       // Calculate percentage of clients who have at least one follow-up
        g.contribution = g.total > 0 ? ((g.followedUp / g.total) * 100).toFixed(1) : 0;
     });
 
     return groups;
   };
 
+  // Helper loop to count globals efficiently
+  clients.forEach(c => {
+      if (c.nextFollowUp) {
+          const d = new Date(c.nextFollowUp);
+          d.setHours(0,0,0,0);
+          if (d.getTime() <= today.getTime()) dueFollowups++;
+      }
+      if (c.overdueFollowUps > 0) overdueClients++;
+      if (c.totalFollowUps > 0) clientsWithFollowUp++;
+  });
+
   const stats = {
     totalClients: clients.length,
-    dueFollowups: dueClients.length,
-    overdueClients: overdueClients.length,
+    dueFollowups: dueFollowups,
+    overdueClients: overdueClients,
     statusCounts: countBy(clients, c => c.status),
     contentCounts: countBy(clients, c => c.content),
     feedbackCounts: countBy(clients, c => c.latestFeedback),
     storeStats: aggregate(c => c.storeCode),
     picStats: aggregate(c => c.pic),
-    avgFollowUps: clients.length > 0 ?
-      (clients.reduce((sum, client) => sum + client.totalFollowUps, 0) / clients.length).toFixed(1) : 0
+    // Change Avg Follow-up (scalar) to Rate (Percentage)
+    followUpRate: clients.length > 0 ?
+        ((clientsWithFollowUp / clients.length) * 100).toFixed(1) : 0
   };
 
   return stats;
