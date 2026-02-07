@@ -275,39 +275,39 @@
     }
 
     function createChartCard(title, data, isComplex) {
-        let html = `<div style="background:white; padding:15px; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.1);"><h3>${title}</h3>`;
+        let html = '<div style="background:white; padding:15px; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.1);"><h3>' + title + '</h3>';
         if (isComplex) {
             Object.entries(data).forEach(function(entry) {
                 const key = entry[0];
                 const val = entry[1];
-                html += `<div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <strong style="font-size:1.1em;">${key}</strong>
-                        <span style="background:#e8f4fc; padding:2px 8px; border-radius:10px; font-size:0.9em;">${val.contribution}%</span>
-                    </div>
-                    <div style="font-size:0.9em; color:#666; margin-top:5px;">
-                        Total: ${val.total} | Followed-up: ${val.followedUp}
-                    </div>
-                    <div style="margin-top:8px; font-size:0.85em; padding-left:10px; border-left:2px solid #ddd;">
-                        <div style="font-weight:bold; color:#555;">Top Content:</div>
-                        ${Object.entries(val.content || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
-                            `<span style="margin-right:10px;">${e[0]}: ${e[1]}</span>`
-                        ).join('') || 'None'}
+                html += '<div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">' +
+                    '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                        '<strong style="font-size:1.1em;">' + key + '</strong>' +
+                        '<span style="background:#e8f4fc; padding:2px 8px; border-radius:10px; font-size:0.9em;">' + val.contribution + '%</span>' +
+                    '</div>' +
+                    '<div style="font-size:0.9em; color:#666; margin-top:5px;">' +
+                        'Total: ' + val.total + ' | Followed-up: ' + val.followedUp +
+                    '</div>' +
+                    '<div style="margin-top:8px; font-size:0.85em; padding-left:10px; border-left:2px solid #ddd;">' +
+                        '<div style="font-weight:bold; color:#555;">Top Content:</div>' +
+                        (Object.entries(val.content || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
+                            '<span style="margin-right:10px;">' + e[0] + ': ' + e[1] + '</span>'
+                        ).join('') || 'None') +
 
-                        <div style="font-weight:bold; color:#555; margin-top:5px;">Top Feedback:</div>
-                        ${Object.entries(val.feedback || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
-                            `<span style="margin-right:10px;">${e[0]}: ${e[1]}</span>`
-                        ).join('') || 'None'}
-                    </div>
-                </div>`;
+                        '<div style="font-weight:bold; color:#555; margin-top:5px;">Top Feedback:</div>' +
+                        (Object.entries(val.feedback || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
+                            '<span style="margin-right:10px;">' + e[0] + ': ' + e[1] + '</span>'
+                        ).join('') || 'None') +
+                    '</div>' +
+                '</div>';
             });
         } else {
             Object.entries(data).forEach(function(entry) {
                 const key = entry[0];
                 const val = entry[1];
-                html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;">
-                    <span>${key}</span> <strong>${val}</strong>
-                </div>`;
+                html += '<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;">' +
+                    '<span>' + key + '</span> <strong>' + val + '</strong>' +
+                '</div>';
             });
         }
         html += '</div>';
@@ -613,10 +613,10 @@
         due.forEach(function(c) {
              let p = String(c.phone).replace(/\D/g,'');
              if(p.startsWith('0')) p = '62' + p.substring(1);
-             html += `<li style="margin-bottom:10px; padding:10px; border:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                <span>${c.clientName} (${c.phone})</span>
-                <a href="https://wa.me/${p}" target="_blank" class="btn btn-wa" onclick="openFollowup(${c.row})">Chat</a>
-             </li>`;
+             html += '<li style="margin-bottom:10px; padding:10px; border:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">' +
+                '<span>' + c.clientName + ' (' + c.phone + ')</span>' +
+                '<a href="https://wa.me/' + p + '" target="_blank" class="btn btn-wa" onclick="openFollowup(' + c.row + ')">Chat</a>' +
+             '</li>';
         });
         html += '</ul>';
         if(due.length === 0) html = '<p>No clients due for follow-up with phone numbers.</p>';
