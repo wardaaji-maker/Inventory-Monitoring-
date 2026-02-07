@@ -276,12 +276,11 @@
 
     function renderDashboard(stats) {
         // Stats Grid
-        document.getElementById('statsGrid').innerHTML = `
-            <div class="stat-card"><h1>${stats.totalClients}</h1><p>Total Clients</p></div>
-            <div class="stat-card"><h1>${stats.dueFollowups}</h1><p>Due Today</p></div>
-            <div class="stat-card"><h1 style="color:#e74c3c">${stats.overdueClients}</h1><p>Overdue</p></div>
-            <div class="stat-card"><h1>${stats.avgFollowUps}</h1><p>Avg Follow-ups</p></div>
-        `;
+        document.getElementById('statsGrid').innerHTML =
+            '<div class="stat-card"><h1>' + stats.totalClients + '</h1><p>Total Clients</p></div>' +
+            '<div class="stat-card"><h1>' + stats.dueFollowups + '</h1><p>Due Today</p></div>' +
+            '<div class="stat-card"><h1 style="color:#e74c3c">' + stats.overdueClients + '</h1><p>Overdue</p></div>' +
+            '<div class="stat-card"><h1>' + stats.avgFollowUps + '</h1><p>Avg Follow-ups</p></div>';
 
         // Breakdowns
         let html = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">';
@@ -409,60 +408,60 @@
         const div = document.getElementById(containerId);
         if (!data.length) { div.innerHTML = 'No data.'; return; }
 
-        let headerCheckbox = withCheckboxes ? `<th style="width:30px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>` : '';
+        let headerCheckbox = withCheckboxes ? '<th style="width:30px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>' : '';
 
         // Desktop
-        let html = `<table class="data-table"><thead><tr>
-            ${headerCheckbox}
-            <th>ID</th><th>Name</th><th>PIC</th><th>Latest Content</th><th>Latest Feedback</th><th>Next Follow-up</th><th>Actions</th>
-        </tr></thead><tbody>`;
+        let html = '<table class="data-table"><thead><tr>' +
+            headerCheckbox +
+            '<th>ID</th><th>Name</th><th>PIC</th><th>Latest Content</th><th>Latest Feedback</th><th>Next Follow-up</th><th>Actions</th>' +
+        '</tr></thead><tbody>';
 
         // Mobile
         let mobileHtml = '<div class="mobile-list">';
 
         data.forEach(function(c) {
             const next = c.nextFollowUp ? new Date(c.nextFollowUp).toLocaleDateString() : '-';
-            let rowCheckbox = withCheckboxes ? `<td><input type="checkbox" class="client-checkbox" value="${c.row}" onclick="updateSelection()"></td>` : '';
-            let cardCheckbox = withCheckboxes ? `<input type="checkbox" class="client-checkbox" value="${c.row}" onclick="updateSelection()">` : '';
+            let rowCheckbox = withCheckboxes ? '<td><input type="checkbox" class="client-checkbox" value="' + c.row + '" onclick="updateSelection()"></td>' : '';
+            let cardCheckbox = withCheckboxes ? '<input type="checkbox" class="client-checkbox" value="' + c.row + '" onclick="updateSelection()">' : '';
 
             // Table Row
-            html += `<tr>
-                ${rowCheckbox}
-                <td>${c.clientId}</td>
-                <td>${c.clientName}<br><small>${c.phone}</small></td>
-                <td>${c.pic||'-'}</td>
-                <td>${c.content||'-'}</td>
-                <td>${c.latestFeedback||'-'}</td>
-                <td style="${c.overdueFollowUps>0?'color:red':''}">${next}</td>
-                <td>
-                    <button class="btn" onclick="openFollowup(${c.row})" title="Add Follow-up"><i class="fas fa-plus"></i></button>
-                    <button class="btn" onclick="viewClientDetails(${c.row})" title="View History"><i class="fas fa-eye"></i></button>
-                    ${c.phone ? `<button class="btn btn-wa" onclick="sendSingleWa('${c.phone}', ${c.row})" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>` : ''}
-                </td>
-            </tr>`;
+            html += '<tr>' +
+                rowCheckbox +
+                '<td>' + c.clientId + '</td>' +
+                '<td>' + c.clientName + '<br><small>' + c.phone + '</small></td>' +
+                '<td>' + (c.pic||'-') + '</td>' +
+                '<td>' + (c.content||'-') + '</td>' +
+                '<td>' + (c.latestFeedback||'-') + '</td>' +
+                '<td style="' + (c.overdueFollowUps>0?'color:red':'') + '">' + next + '</td>' +
+                '<td>' +
+                    '<button class="btn" onclick="openFollowup(' + c.row + ')" title="Add Follow-up"><i class="fas fa-plus"></i></button> ' +
+                    '<button class="btn" onclick="viewClientDetails(' + c.row + ')" title="View History"><i class="fas fa-eye"></i></button> ' +
+                    (c.phone ? '<button class="btn btn-wa" onclick="sendSingleWa(\'' + c.phone + '\', ' + c.row + ')" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>' : '') +
+                '</td>' +
+            '</tr>';
 
             // Mobile Card
-            mobileHtml += `
-            <div class="mobile-card">
-               <div class="mobile-card-header">
-                  <div style="display:flex; align-items:center; gap:10px;">
-                      ${cardCheckbox}
-                      <span>${c.clientName}</span>
-                  </div>
-                  <span style="font-size:0.8em; background:#e8f4fc; padding:2px 6px; border-radius:4px;">${c.clientId}</span>
-               </div>
-               <div class="mobile-card-body">
-                  <div><i class="fas fa-tag"></i> Latest Content: ${c.content || '-'}</div>
-                  <div><i class="fas fa-comment"></i> Feedback: ${c.latestFeedback || '-'}</div>
-                  <div style="${c.overdueFollowUps>0?'color:#e74c3c':''}"><i class="fas fa-clock"></i> Next: ${next}</div>
-                  <div><i class="fas fa-user"></i> PIC: ${c.pic || '-'}</div>
-               </div>
-               <div class="mobile-card-actions">
-                  <button class="btn" onclick="openFollowup(${c.row})"><i class="fas fa-edit"></i> Follow-up</button>
-                  <button class="btn" onclick="viewClientDetails(${c.row})"><i class="fas fa-eye"></i> History</button>
-                  ${c.phone ? `<button class="btn btn-wa" onclick="sendSingleWa('${c.phone}', ${c.row})"><i class="fab fa-whatsapp"></i> Chat</button>` : ''}
-               </div>
-            </div>`;
+            mobileHtml +=
+            '<div class="mobile-card">' +
+               '<div class="mobile-card-header">' +
+                  '<div style="display:flex; align-items:center; gap:10px;">' +
+                      cardCheckbox +
+                      '<span>' + c.clientName + '</span>' +
+                  '</div>' +
+                  '<span style="font-size:0.8em; background:#e8f4fc; padding:2px 6px; border-radius:4px;">' + c.clientId + '</span>' +
+               '</div>' +
+               '<div class="mobile-card-body">' +
+                  '<div><i class="fas fa-tag"></i> Latest Content: ' + (c.content || '-') + '</div>' +
+                  '<div><i class="fas fa-comment"></i> Feedback: ' + (c.latestFeedback || '-') + '</div>' +
+                  '<div style="' + (c.overdueFollowUps>0?'color:#e74c3c':'') + '"><i class="fas fa-clock"></i> Next: ' + next + '</div>' +
+                  '<div><i class="fas fa-user"></i> PIC: ' + (c.pic || '-') + '</div>' +
+               '</div>' +
+               '<div class="mobile-card-actions">' +
+                  '<button class="btn" onclick="openFollowup(' + c.row + ')"><i class="fas fa-edit"></i> Follow-up</button>' +
+                  '<button class="btn" onclick="viewClientDetails(' + c.row + ')"><i class="fas fa-eye"></i> History</button>' +
+                  (c.phone ? '<button class="btn btn-wa" onclick="sendSingleWa(\'' + c.phone + '\', ' + c.row + ')"><i class="fab fa-whatsapp"></i> Chat</button>' : '') +
+               '</div>' +
+            '</div>';
         });
         html += '</tbody></table>';
 
@@ -519,7 +518,7 @@
         const c = clients.find(function(x) { return x.row === row; });
         if(!c) return;
         document.getElementById('clientIdRow').value = row;
-        document.getElementById('followupInfo').innerHTML = `<strong>${c.clientName}</strong><br>Last Content: ${c.content||'None'}`;
+        document.getElementById('followupInfo').innerHTML = '<strong>' + c.clientName + '</strong><br>Last Content: ' + (c.content||'None');
         // Reset content to force selection for next blast or leave empty
         document.getElementById('fContent').value = '';
         document.getElementById('followupModal').style.display = 'flex';
@@ -534,33 +533,32 @@
         document.getElementById('clientDetailsModal').style.display = 'flex';
 
         google.script.run.withSuccessHandler(function(history) {
-            let html = `
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
-                    <div>
-                        <h3 style="margin-top:0;">${c.clientName}</h3>
-                        <p><strong>ID:</strong> ${c.clientId}</p>
-                        <p><strong>Phone:</strong> ${c.phone||'-'}</p>
-                        <p><strong>Email:</strong> ${c.email||'-'}</p>
-                        <p><strong>Store:</strong> ${c.storeCode||'-'}</p>
-                    </div>
-                    <div>
-                        <p><strong>Status:</strong> ${c.status||'-'}</p>
-                        <p><strong>Latest Content:</strong> ${c.content||'-'}</p>
-                        <p><strong>Latest Feedback:</strong> ${c.latestFeedback||'-'}</p>
-                        <p><strong>PIC:</strong> ${c.pic||'-'}</p>
-                    </div>
-                </div>
-                <h3>Follow-up History</h3>
-            `;
+            let html =
+                '<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">' +
+                    '<div>' +
+                        '<h3 style="margin-top:0;">' + c.clientName + '</h3>' +
+                        '<p><strong>ID:</strong> ' + c.clientId + '</p>' +
+                        '<p><strong>Phone:</strong> ' + (c.phone||'-') + '</p>' +
+                        '<p><strong>Email:</strong> ' + (c.email||'-') + '</p>' +
+                        '<p><strong>Store:</strong> ' + (c.storeCode||'-') + '</p>' +
+                    '</div>' +
+                    '<div>' +
+                        '<p><strong>Status:</strong> ' + (c.status||'-') + '</p>' +
+                        '<p><strong>Latest Content:</strong> ' + (c.content||'-') + '</p>' +
+                        '<p><strong>Latest Feedback:</strong> ' + (c.latestFeedback||'-') + '</p>' +
+                        '<p><strong>PIC:</strong> ' + (c.pic||'-') + '</p>' +
+                    '</div>' +
+                '</div>' +
+                '<h3>Follow-up History</h3>';
 
             if (history && history.length > 0) {
                 html += '<div style="max-height:300px; overflow-y:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Feedback</th><th>Content</th></tr></thead><tbody>';
                 history.forEach(function(h) {
-                    html += `<tr>
-                        <td>${new Date(h.date).toLocaleDateString()}</td>
-                        <td>${h.feedback}</td>
-                        <td>${h.content}</td>
-                    </tr>`;
+                    html += '<tr>' +
+                        '<td>' + new Date(h.date).toLocaleDateString() + '</td>' +
+                        '<td>' + h.feedback + '</td>' +
+                        '<td>' + h.content + '</td>' +
+                    '</tr>';
                 });
                 html += '</tbody></table></div>';
             } else {
@@ -619,9 +617,9 @@
     }
 
     function sendSingleWa(phone, row) {
-        let p = phone.replace(/\D/g,'');
+        let p = String(phone).replace(/\D/g,'');
         if(p.startsWith('0')) p = '62' + p.substring(1);
-        const url = `https://wa.me/${p}`;
+        const url = 'https://wa.me/' + p;
         window.open(url, '_blank');
         openFollowup(row);
     }
