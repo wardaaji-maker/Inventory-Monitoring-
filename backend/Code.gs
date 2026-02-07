@@ -30,8 +30,7 @@ function doGet() {
   // Inspect headers on load
   checkAndRepairHeaders();
 
-  return HtmlService.createTemplateFromFile('Index')
-    .evaluate()
+  return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Client Follow-up Monitor')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
