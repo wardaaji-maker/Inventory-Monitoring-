@@ -276,7 +276,9 @@ function getAllClients() {
           pic: (row.length > COLUMNS.PIC) ? row[COLUMNS.PIC] : '',
           status: (row.length > COLUMNS.STATUS) ? row[COLUMNS.STATUS] : '',
           content: latestContent,
+          progress: latestContent, // Alias for legacy frontend compatibility
           followUps: followUps,
+          followUpDates: followUps.map(f => f.date), // Alias for legacy frontend compatibility
           latestFeedback: latestFeedback,
           nextFollowUp: nextFollowUp,
           overdueFollowUps: overdueFollowUps,
@@ -341,7 +343,10 @@ function saveFollowupInternal(sheet, clientRow, followupData) {
   const followupDate = new Date(followupData.date);
   sheet.getRange(clientRow, dateColumn).setValue(followupDate);
   sheet.getRange(clientRow, feedbackColumn).setValue(followupData.notes);
-  sheet.getRange(clientRow, contentColumn).setValue(followupData.content);
+
+  // Handle content (mapped from progress if needed)
+  const contentToSave = followupData.content || followupData.progress;
+  sheet.getRange(clientRow, contentColumn).setValue(contentToSave);
 
   // Update status
   if (followupData.status) {
@@ -414,7 +419,7 @@ function logFollowupActivity(activity) {
     activity.notes,
     activity.pic,
     activity.status || '',
-    activity.content || ''
+    activity.content || activity.progress || ''
   ]);
 }
 
