@@ -28,12 +28,19 @@ const COLUMNS = {
 // Main web app
 function doGet() {
   // Inspect headers on load
-  checkAndRepairHeaders();
+  // checkAndRepairHeaders(); // Removed to prevent blocking on page load
 
   return HtmlService.createHtmlOutputFromFile('Index')
     .setTitle('Client Follow-up Monitor')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu('Client Monitor')
+    .addItem('Repair Database', 'checkAndRepairHeaders')
+    .addToUi();
 }
 
 function include(filename) {
@@ -222,6 +229,8 @@ function getPromotionTypes() {
 function getAllClients() {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
+
+  if (!sheet) return [];
   const lastRow = sheet.getLastRow();
 
   if (lastRow <= 1) return [];

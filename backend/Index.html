@@ -53,6 +53,11 @@
   </style>
 </head>
 <body>
+  <div id="app-loading" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.9); z-index:9999; display:flex; align-items:center; justify-content:center; flex-direction:column;">
+    <i class="fas fa-spinner fa-spin fa-3x" style="color:#3498db;"></i>
+    <p style="margin-top:15px; font-size:1.2em; color:#555;">Loading Application...</p>
+  </div>
+
   <div class="container">
     <div class="header">
       <h1><i class="fas fa-building"></i> Client Follow-up Monitor</h1>
@@ -183,15 +188,28 @@
     let selectedRows = [];
 
     function init() {
+        console.log("App initializing...");
         try {
             const fDateInput = document.getElementById('fDate');
             if (fDateInput) {
                 fDateInput.valueAsDate = new Date();
             }
 
-            loadDashboard();
-            loadClients();
-            loadPromotions();
+            // Parallel loading
+            Promise.all([
+                new Promise(resolve => loadDashboard(resolve)),
+                new Promise(resolve => loadClients(resolve)),
+                new Promise(resolve => loadPromotions(resolve))
+            ]).then(() => {
+                const loader = document.getElementById('app-loading');
+                if(loader) loader.style.display = 'none';
+                console.log("App fully loaded.");
+            }).catch(e => {
+                console.error("Loading error:", e);
+                // Hide loader anyway so user can see partial content or try again
+                const loader = document.getElementById('app-loading');
+                if(loader) loader.style.display = 'none';
+            });
 
             document.getElementById('followupForm').onsubmit = function(e) {
                 e.preventDefault();
@@ -207,6 +225,7 @@
         } catch (e) {
             console.error(e);
             alert("Error initializing app: " + e.message);
+            document.getElementById('app-loading').style.display = 'none';
         }
     }
 
@@ -215,7 +234,7 @@
         alert("System Error: " + e.message);
     }
 
-    function loadPromotions() {
+    function loadPromotions(callback) {
         google.script.run.withSuccessHandler(function(types) {
             // Modal Dropdown
             const sel = document.getElementById('fContent');
@@ -224,17 +243,19 @@
             const filterSel = document.getElementById('filterContent');
             filterSel.innerHTML = '<option value="">All Content</option>';
 
-            types.forEach(function(t) {
-                // Modal
-                const opt = document.createElement('option');
-                opt.value = t; opt.textContent = t;
-                sel.appendChild(opt);
+            if (types && Array.isArray(types)) {
+                types.forEach(function(t) {
+                    // Modal
+                    const opt = document.createElement('option');
+                    opt.value = t; opt.textContent = t;
+                    sel.appendChild(opt);
 
-                // Filter
-                const filterOpt = document.createElement('option');
-                filterOpt.value = t; filterOpt.textContent = t;
-                filterSel.appendChild(filterOpt);
-            });
+                    // Filter
+                    const filterOpt = document.createElement('option');
+                    filterOpt.value = t; filterOpt.textContent = t;
+                    filterSel.appendChild(filterOpt);
+                });
+            }
 
             // Restore Filters
             const savedContent = localStorage.getItem('filterContent');
@@ -242,11 +263,15 @@
                 filterSel.value = savedContent;
                 filterClients(); // Re-trigger filter
             }
-        }).withFailureHandler(onError).getPromotionTypes();
+            if(callback) callback();
+        }).withFailureHandler(function(e) { onError(e); if(callback) callback(); }).getPromotionTypes();
     }
 
-    function loadDashboard() {
-        google.script.run.withSuccessHandler(renderDashboard).withFailureHandler(onError).getDashboardStats();
+    function loadDashboard(callback) {
+        google.script.run.withSuccessHandler(function(stats) {
+            renderDashboard(stats);
+            if(callback) callback();
+        }).withFailureHandler(function(e) { onError(e); if(callback) callback(); }).getDashboardStats();
     }
 
     function renderDashboard(stats) {
@@ -314,9 +339,9 @@
         return html;
     }
 
-    function loadClients() {
+    function loadClients(callback) {
         google.script.run.withSuccessHandler(function(data) {
-            clients = data;
+            clients = data || [];
             populateFilters();
             renderTable(clients, 'clientsContent');
 
@@ -338,8 +363,8 @@
                 document.getElementById('filterPic').value = savedPic;
                 filterClients();
             }
-
-        }).withFailureHandler(onError).getAllClients();
+            if(callback) callback();
+        }).withFailureHandler(function(e) { onError(e); if(callback) callback(); }).getAllClients();
     }
 
     function populateFilters() {
