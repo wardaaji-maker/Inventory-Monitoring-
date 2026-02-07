@@ -188,7 +188,7 @@
         loadClients();
         loadPromotions();
 
-        document.getElementById('followupForm').onsubmit = (e) => {
+        document.getElementById('followupForm').onsubmit = function(e) {
             e.preventDefault();
             saveFollowup();
         };
@@ -202,7 +202,7 @@
     }
 
     function loadPromotions() {
-        google.script.run.withSuccessHandler(types => {
+        google.script.run.withSuccessHandler(function(types) {
             // Modal Dropdown
             const sel = document.getElementById('fContent');
             sel.innerHTML = '<option value="">-- Select Content --</option>';
@@ -210,7 +210,7 @@
             const filterSel = document.getElementById('filterContent');
             filterSel.innerHTML = '<option value="">All Content</option>';
 
-            types.forEach(t => {
+            types.forEach(function(t) {
                 // Modal
                 const opt = document.createElement('option');
                 opt.value = t; opt.textContent = t;
@@ -260,10 +260,12 @@
         document.getElementById('dashboardContent').innerHTML = html;
     }
 
-    function createChartCard(title, data, isComplex=false) {
+    function createChartCard(title, data, isComplex) {
         let html = `<div style="background:white; padding:15px; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.1);"><h3>${title}</h3>`;
         if (isComplex) {
-            Object.entries(data).forEach(([key, val]) => {
+            Object.entries(data).forEach(function(entry) {
+                const key = entry[0];
+                const val = entry[1];
                 html += `<div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                         <strong style="font-size:1.1em;">${key}</strong>
@@ -274,19 +276,21 @@
                     </div>
                     <div style="margin-top:8px; font-size:0.85em; padding-left:10px; border-left:2px solid #ddd;">
                         <div style="font-weight:bold; color:#555;">Top Content:</div>
-                        ${Object.entries(val.content || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v]) =>
-                            `<span style="margin-right:10px;">${k}: ${v}</span>`
+                        ${Object.entries(val.content || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
+                            `<span style="margin-right:10px;">${e[0]}: ${e[1]}</span>`
                         ).join('') || 'None'}
 
                         <div style="font-weight:bold; color:#555; margin-top:5px;">Top Feedback:</div>
-                        ${Object.entries(val.feedback || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v]) =>
-                            `<span style="margin-right:10px;">${k}: ${v}</span>`
+                        ${Object.entries(val.feedback || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
+                            `<span style="margin-right:10px;">${e[0]}: ${e[1]}</span>`
                         ).join('') || 'None'}
                     </div>
                 </div>`;
             });
         } else {
-            Object.entries(data).forEach(([key, val]) => {
+            Object.entries(data).forEach(function(entry) {
+                const key = entry[0];
+                const val = entry[1];
                 html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;">
                     <span>${key}</span> <strong>${val}</strong>
                 </div>`;
@@ -297,13 +301,13 @@
     }
 
     function loadClients() {
-        google.script.run.withSuccessHandler(data => {
+        google.script.run.withSuccessHandler(function(data) {
             clients = data;
             populateFilters();
             renderTable(clients, 'clientsContent');
 
             // Due/Overdue
-            const due = clients.filter(c => {
+            const due = clients.filter(function(c) {
                  if(!c.nextFollowUp) return false;
                  const d = new Date(c.nextFollowUp); d.setHours(0,0,0,0);
                  const today = new Date(); today.setHours(0,0,0,0);
@@ -311,7 +315,7 @@
             });
             renderTable(due, 'dueContent', false);
 
-            const overdue = clients.filter(c => c.overdueFollowUps > 0);
+            const overdue = clients.filter(function(c) { return c.overdueFollowUps > 0; });
             renderTable(overdue, 'overdueContent', false);
 
             // Restore Filters triggering (if already populated)
@@ -325,10 +329,12 @@
     }
 
     function populateFilters() {
-        const pics = [...new Set(clients.map(c => c.pic).filter(x=>x))];
+        const uniquePics = new Set();
+        clients.forEach(function(c) { if(c.pic) uniquePics.add(c.pic); });
+
         const sel = document.getElementById('filterPic');
         sel.innerHTML = '<option value="">All PIC</option>';
-        pics.forEach(p => {
+        uniquePics.forEach(function(p) {
             const opt = document.createElement('option');
             opt.value = p; opt.textContent = p;
             sel.appendChild(opt);
@@ -350,7 +356,7 @@
         localStorage.setItem('filterPic', pic);
         localStorage.setItem('filterContent', content);
 
-        const filtered = clients.filter(c => {
+        const filtered = clients.filter(function(c) {
             const matchTerm = c.clientName.toLowerCase().includes(term) || c.clientId.toLowerCase().includes(term);
             const matchPic = !pic || c.pic === pic;
             const matchContent = !content || c.content === content;
@@ -359,7 +365,8 @@
         renderTable(filtered, 'clientsContent');
     }
 
-    function renderTable(data, containerId, withCheckboxes = true) {
+    function renderTable(data, containerId, withCheckboxes) {
+        if (withCheckboxes === undefined) withCheckboxes = true;
         const div = document.getElementById(containerId);
         if (!data.length) { div.innerHTML = 'No data.'; return; }
 
@@ -374,7 +381,7 @@
         // Mobile
         let mobileHtml = '<div class="mobile-list">';
 
-        data.forEach(c => {
+        data.forEach(function(c) {
             const next = c.nextFollowUp ? new Date(c.nextFollowUp).toLocaleDateString() : '-';
             let rowCheckbox = withCheckboxes ? `<td><input type="checkbox" class="client-checkbox" value="${c.row}" onclick="updateSelection()"></td>` : '';
             let cardCheckbox = withCheckboxes ? `<input type="checkbox" class="client-checkbox" value="${c.row}" onclick="updateSelection()">` : '';
@@ -434,14 +441,18 @@
         const main = document.getElementById('selectAll');
         // Select both desktop and mobile checkboxes
         const boxes = document.querySelectorAll('.client-checkbox');
-        boxes.forEach(b => b.checked = main.checked);
+        for (let i = 0; i < boxes.length; i++) {
+            boxes[i].checked = main.checked;
+        }
         updateSelection();
     }
 
     function updateSelection() {
         const boxes = document.querySelectorAll('.client-checkbox:checked');
-        // Deduplicate values since we have both mobile/desktop checkboxes for same row
-        const uniqueRows = new Set(Array.from(boxes).map(b => parseInt(b.value)));
+        const uniqueRows = new Set();
+        for (let i = 0; i < boxes.length; i++) {
+            uniqueRows.add(parseInt(boxes[i].value));
+        }
         selectedRows = Array.from(uniqueRows);
 
         const countSpan = document.getElementById('selectedCount');
@@ -466,7 +477,7 @@
     }
 
     function openFollowup(row) {
-        const c = clients.find(x => x.row === row);
+        const c = clients.find(function(x) { return x.row === row; });
         if(!c) return;
         document.getElementById('clientIdRow').value = row;
         document.getElementById('followupInfo').innerHTML = `<strong>${c.clientName}</strong><br>Last Content: ${c.content||'None'}`;
@@ -476,14 +487,14 @@
     }
 
     function viewClientDetails(row) {
-        const c = clients.find(x => x.row === row);
+        const c = clients.find(function(x) { return x.row === row; });
         if(!c) return;
 
         // Show loading state
         document.getElementById('clientDetailsContent').innerHTML = '<p>Loading history...</p>';
         document.getElementById('clientDetailsModal').style.display = 'flex';
 
-        google.script.run.withSuccessHandler(history => {
+        google.script.run.withSuccessHandler(function(history) {
             let html = `
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
                     <div>
@@ -505,7 +516,7 @@
 
             if (history && history.length > 0) {
                 html += '<div style="max-height:300px; overflow-y:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Feedback</th><th>Content</th></tr></thead><tbody>';
-                history.forEach(h => {
+                history.forEach(function(h) {
                     html += `<tr>
                         <td>${new Date(h.date).toLocaleDateString()}</td>
                         <td>${h.feedback}</td>
@@ -550,7 +561,7 @@
             // status: 'LEADS' - Removed to prevent overwriting existing status
         };
 
-        const handler = google.script.run.withSuccessHandler(() => {
+        const handler = google.script.run.withSuccessHandler(function() {
             alert('Saved');
             closeModal('followupModal');
             loadClients();
@@ -577,7 +588,7 @@
     }
 
     function openBulkWa() {
-        const due = clients.filter(c => {
+        const due = clients.filter(function(c) {
             if(!c.nextFollowUp) return false;
              const d = new Date(c.nextFollowUp); d.setHours(0,0,0,0);
              const today = new Date(); today.setHours(0,0,0,0);
@@ -585,7 +596,7 @@
         });
 
         let html = '<ul style="list-style:none; padding:0;">';
-        due.forEach(c => {
+        due.forEach(function(c) {
              let p = c.phone.replace(/\D/g,'');
              if(p.startsWith('0')) p = '62' + p.substring(1);
              html += `<li style="margin-bottom:10px; padding:10px; border:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
@@ -604,19 +615,27 @@
     }
 
     function showTab(id) {
-        document.querySelectorAll('.tab-content').forEach(d => d.style.display='none');
-        document.querySelectorAll('.sidebar button').forEach(b => b.classList.remove('active'));
-        document.getElementById(id+'Tab').style.display='block';
+        const tabs = document.querySelectorAll('.tab-content');
+        for (let i = 0; i < tabs.length; i++) {
+            tabs[i].style.display = 'none';
+        }
 
-        // Highlight logic
-        const btn = document.getElementById('btn-'+id);
-        if(btn) btn.classList.add('active');
+        const btns = document.querySelectorAll('.sidebar button');
+        for (let i = 0; i < btns.length; i++) {
+            btns[i].classList.remove('active');
+        }
+
+        const targetTab = document.getElementById(id + 'Tab');
+        if (targetTab) targetTab.style.display = 'block';
+
+        const targetBtn = document.getElementById('btn-' + id);
+        if (targetBtn) targetBtn.classList.add('active');
 
         localStorage.setItem('currentTab', id);
     }
 
     function exportData() {
-        google.script.run.withSuccessHandler(res => {
+        google.script.run.withSuccessHandler(function(res) {
             alert("Export generated: " + res.filename);
         }).exportClientData();
     }
