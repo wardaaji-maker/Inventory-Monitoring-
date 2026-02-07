@@ -61,10 +61,10 @@ function checkAndRepairHeaders() {
       settingsSheet.getRange('A4').setValue('Special Offer');
     }
 
-    // Run Safe Migration if needed
+    // Run Safe Migration to adjust structure
     safeMigrateData(sheet);
 
-    // Standard Repair Logic (Append Only)
+    // Enforce Headers
     const headers = generateHeaders();
     const requiredCols = headers.length;
 
@@ -72,9 +72,19 @@ function checkAndRepairHeaders() {
       sheet.insertColumnsAfter(sheet.getMaxColumns(), requiredCols - sheet.getMaxColumns());
     }
 
-    const lastRow = sheet.getLastRow();
-    if (lastRow === 0) {
-       sheet.getRange(1, 1, 1, requiredCols).setValues([headers]);
+    // Check and Fix Headers if they don't match exactly
+    const currentHeaders = sheet.getRange(1, 1, 1, requiredCols).getValues()[0];
+    let needsUpdate = false;
+    for (let i = 0; i < headers.length; i++) {
+        if (currentHeaders[i] !== headers[i]) {
+            needsUpdate = true;
+            break;
+        }
+    }
+
+    if (needsUpdate) {
+        Logger.log('Enforcing correct headers...');
+        sheet.getRange(1, 1, 1, requiredCols).setValues([headers]);
     }
 
     // Apply Data Validation to Content Columns
@@ -120,9 +130,11 @@ function safeMigrateData(sheet) {
     // Check for "Progress" column at Index 10 (Column 11/K)
     let headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
 
+    // AGGRESSIVE CHECK: If "Progress" exists at col 11, delete it.
     if (headers.length > 10 && (headers[10] === 'Progress' || headers[10] === 'J')) {
-        Logger.log("Safe Migration: Deleting 'Progress' column...");
+        Logger.log("Permanent Fix: Deleting 'Progress' column...");
         sheet.deleteColumn(11); // Delete Column K
+        // Refresh headers
         headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     }
 
@@ -137,7 +149,9 @@ function safeMigrateData(sheet) {
         } else {
             const currentHeader = headers[contColIdx - 1];
             if (currentHeader !== `Content ${i}`) {
-                Logger.log(`Safe Migration: Inserting 'Content ${i}' at Column ${contColIdx}...`);
+                Logger.log(`Permanent Fix: Inserting 'Content ${i}' at Column ${contColIdx}...`);
+                // If the column there isn't Content i, we assume it's missing and we need to insert it
+                // Logic: Date i, Feedback i are present. Insert Content i after Feedback i.
                 sheet.insertColumnAfter(feedColIdx);
                 sheet.getRange(1, contColIdx).setValue(`Content ${i}`);
                 headers.splice(contColIdx - 1, 0, `Content ${i}`);
