@@ -226,7 +226,7 @@ function getPromotionTypes() {
 }
 
 // Get all clients with enhanced data
-function getAllClients() {
+function getAllClients(simpleMode) {
   const ss = SpreadsheetApp.openById(CONFIG.SPREADSHEET_ID);
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAME);
 
@@ -259,11 +259,13 @@ function getAllClients() {
           const contentVal = (contentColIdx < row.length) ? row[contentColIdx] : '';
 
           if (dateVal && dateVal instanceof Date) {
-            followUps.push({
-              date: dateVal,
-              feedback: feedbackVal || '',
-              content: contentVal || ''
-            });
+            if (!simpleMode) {
+                followUps.push({
+                date: dateVal,
+                feedback: feedbackVal || '',
+                content: contentVal || ''
+                });
+            }
 
             if (!latestFollowUpDate || dateVal > latestFollowUpDate) {
               latestFollowUpDate = dateVal;
@@ -297,7 +299,8 @@ function getAllClients() {
              overdueFollowUps = 1;
         }
 
-        return {
+        // Base object
+        const clientObj = {
           row: index + 2,
           no: (row.length > COLUMNS.NO) ? row[COLUMNS.NO] : '',
           clientId: (row.length > COLUMNS.CLIENT_ID) ? row[COLUMNS.CLIENT_ID] : '',
@@ -310,14 +313,32 @@ function getAllClients() {
           pic: (row.length > COLUMNS.PIC) ? row[COLUMNS.PIC] : '',
           status: (row.length > COLUMNS.STATUS) ? row[COLUMNS.STATUS] : '',
           content: latestContent,
-          progress: latestContent, // Alias for legacy frontend compatibility
-          followUps: followUps,
-          followUpDates: followUps.map(f => f.date), // Alias for legacy frontend compatibility
+          progress: latestContent, // Alias
           latestFeedback: latestFeedback,
           nextFollowUp: nextFollowUp,
           overdueFollowUps: overdueFollowUps,
-          totalFollowUps: followUps.length
+          totalFollowUps: followUps.length // This might be 0 if simpleMode is true, need to fix
         };
+
+        if (simpleMode) {
+            // Recalculate totalFollowUps roughly or just don't send if not needed?
+            // Actually, we iterate the loops anyway to find latest, we just didn't push to array.
+            // Let's count them.
+            let count = 0;
+            for (let i = 0; i < CONFIG.MAX_FOLLOW_UPS; i++) {
+                const dateColIdx = COLUMNS.FOLLOW_UP_START + (i * 3);
+                if (dateColIdx < row.length && row[dateColIdx] instanceof Date) {
+                    count++;
+                }
+            }
+            clientObj.totalFollowUps = count;
+        } else {
+            clientObj.followUps = followUps;
+            clientObj.followUpDates = followUps.map(f => f.date);
+            clientObj.totalFollowUps = followUps.length;
+        }
+
+        return clientObj;
       }).filter(client => client.clientId);
 
       return clients;

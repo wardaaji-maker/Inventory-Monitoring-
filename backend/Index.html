@@ -363,7 +363,7 @@
                 filterClients();
             }
             if(callback) callback();
-        }).withFailureHandler(function(e) { onError(e); if(callback) callback(); }).getAllClients();
+        }).withFailureHandler(function(e) { onError(e); if(callback) callback(); }).getAllClients(true); // Pass true for simple mode
     }
 
     function populateFilters() {
