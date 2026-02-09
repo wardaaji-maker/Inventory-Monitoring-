@@ -474,10 +474,18 @@
 
   <!-- Bulk WA Modal -->
   <div id="bulkWaModal" class="modal">
-    <div class="modal-content">
+    <div class="modal-content" style="max-width: 600px;">
       <h2>Bulk WhatsApp</h2>
-      <p>Generate WhatsApp links for clients needing follow-up.</p>
-      <div id="bulkWaContent" style="max-height:400px; overflow-y:auto;"></div>
+
+      <div class="form-group">
+        <label for="waTemplate">Message Template <small>(Use {{name}} for client name)</small></label>
+        <textarea id="waTemplate" rows="4" placeholder="Hello {{name}}, we have a special offer for you..." oninput="updateWaLinks()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px; box-sizing:border-box;"></textarea>
+      </div>
+
+      <p style="margin:10px 0;"><strong>Target:</strong> <span id="waTargetCount">0</span> clients</p>
+
+      <div id="bulkWaContent" style="max-height:300px; overflow-y:auto; border:1px solid #eee; padding:10px; border-radius:5px;"></div>
+
       <div style="margin-top:20px; text-align:right;">
           <button class="btn" style="padding:10px 15px; border:none; border-radius:5px;" onclick="closeModal('bulkWaModal')">Close</button>
       </div>
@@ -1102,28 +1110,64 @@
         openFollowup(row);
     }
 
+    let waTargetList = [];
+
     function openBulkWa() {
-        if (currentParams.category !== 'due') {
-            if(!confirm("Switch to 'Due Today' tab to use Bulk WA?")) return;
-            showTab('due');
+        waTargetList = [];
+
+        // Check selected rows first
+        if (selectedRows.length > 0) {
+            waTargetList = currentClients.filter(function(c) { return selectedRows.includes(c.row) && c.phone; });
+        } else {
+            // Fallback to all visible clients with phone
+            waTargetList = currentClients.filter(function(c) { return c.phone; });
+        }
+
+        if (waTargetList.length === 0) {
+            alert("No clients with phone numbers found in the current view/selection.");
             return;
         }
 
-        const due = currentClients.filter(function(c) { return c.phone; });
+        document.getElementById('waTargetCount').textContent = waTargetList.length;
+        document.getElementById('waTemplate').value = ''; // Reset template
+
+        updateWaLinks();
+
+        document.getElementById('bulkWaModal').style.display = 'flex';
+    }
+
+    function updateWaLinks() {
+        const template = document.getElementById('waTemplate').value;
+        const container = document.getElementById('bulkWaContent');
+
+        if (waTargetList.length === 0) {
+             container.innerHTML = '<p>No targets.</p>';
+             return;
+        }
 
         let html = '<ul style="list-style:none; padding:0;">';
-        due.forEach(function(c) {
+
+        waTargetList.forEach(function(c) {
              let p = String(c.phone).replace(/\D/g,'');
              if(p.startsWith('0')) p = '62' + p.substring(1);
-             html += '<li style="margin-bottom:10px; padding:10px; border:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">' +
-                '<span>' + c.clientName + ' (' + c.phone + ')</span>' +
-                '<a href="https://wa.me/' + p + '" target="_blank" class="btn" style="background:#25D366; color:white; padding:5px 10px; border-radius:5px;" onclick="openFollowup(' + c.row + ')">Chat</a>' +
+
+             let msg = template.replace(/{{name}}/g, c.clientName || '').replace(/{{id}}/g, c.clientId || '');
+             let encodedMsg = encodeURIComponent(msg);
+
+             let link = 'https://wa.me/' + p + (msg ? '?text=' + encodedMsg : '');
+
+             html += '<li style="margin-bottom:10px; padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">' +
+                '<div>' +
+                    '<div style="font-weight:600;">' + (c.clientName || 'Unknown') + '</div>' +
+                    '<div style="font-size:0.85em; color:#666;">' + c.phone + '</div>' +
+                '</div>' +
+                '<a href="' + link + '" target="_blank" class="btn" style="background:#25D366; color:white; padding:6px 12px; border-radius:5px; text-decoration:none; font-size:0.9em; display:flex; align-items:center; gap:5px;" onclick="openFollowup(' + c.row + ')">' +
+                    '<i class="fab fa-whatsapp"></i> Chat' +
+                '</a>' +
              '</li>';
         });
         html += '</ul>';
-        if(due.length === 0) html = '<p>No clients with phone numbers on this page.</p>';
-        document.getElementById('bulkWaContent').innerHTML = html;
-        document.getElementById('bulkWaModal').style.display = 'flex';
+        container.innerHTML = html;
     }
 
     function exportData() {

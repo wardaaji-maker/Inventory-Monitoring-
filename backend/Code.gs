@@ -783,6 +783,7 @@ function searchClients(params) {
       clientId: c.clientId,
       clientName: c.clientName,
       phone: c.phone,
+      email: c.email,
       pic: c.pic,
       content: c.content,
       latestFeedback: c.latestFeedback,
