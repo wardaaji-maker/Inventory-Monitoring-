@@ -1104,7 +1104,11 @@
 
     function sendSingleWa(phone, row) {
         let p = String(phone).replace(/\D/g,'');
-        if(p.startsWith('0')) p = '62' + p.substring(1);
+        if (p.startsWith('0')) {
+             p = '62' + p.substring(1);
+        } else if (!p.startsWith('62')) {
+             p = '62' + p;
+        }
         const url = 'https://wa.me/' + p;
         window.open(url, '_blank');
         openFollowup(row);
@@ -1149,7 +1153,11 @@
 
         waTargetList.forEach(function(c) {
              let p = String(c.phone).replace(/\D/g,'');
-             if(p.startsWith('0')) p = '62' + p.substring(1);
+             if (p.startsWith('0')) {
+                  p = '62' + p.substring(1);
+             } else if (!p.startsWith('62')) {
+                  p = '62' + p;
+             }
 
              let msg = template.replace(/{{name}}/g, c.clientName || '').replace(/{{id}}/g, c.clientId || '');
              let encodedMsg = encodeURIComponent(msg);
