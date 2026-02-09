@@ -306,17 +306,29 @@
 
     /* Responsive */
     @media (max-width: 768px) {
-      .container { height: auto; }
-      .content { flex-direction: column; }
-      .sidebar { width: 100%; }
-      .dashboard-grid { grid-template-columns: 1fr; }
-      .enhanced-table { display: none; }
-      .mobile-list { display: block; }
-      .mobile-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #eee; }
-      .mobile-card-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; align-items: center; }
-      .mobile-card-body { font-size: 0.9em; color: #555; display: grid; gap: 5px; }
-      .mobile-card-actions { margin-top: 15px; display: flex; gap: 10px; }
-      .mobile-card-actions .btn { flex: 1; text-align: center; }
+        .container { height: auto; padding: 10px; }
+        .content { flex-direction: column; overflow: visible; }
+        .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 5px; gap: 10px; box-sizing: border-box; -webkit-overflow-scrolling: touch; }
+        .sidebar button { flex: 0 0 auto; white-space: nowrap; padding: 10px 15px; font-size: 0.9em; }
+        .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+        .stat-card { padding: 15px; }
+        .stat-value { font-size: 1.8em; margin: 5px 0; }
+        .dashboard-grid { grid-template-columns: 1fr; }
+        .header { flex-direction: column; gap: 10px; text-align: center; padding: 15px; }
+        .main-content { padding: 10px; border-radius: 8px; }
+
+        .enhanced-table { display: none; }
+        .mobile-list { display: block; }
+        .mobile-card { background: white; padding: 15px; margin-bottom: 12px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid #eee; }
+        .mobile-card-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: 600; align-items: center; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px; }
+        .mobile-card-body { font-size: 0.95em; color: #444; display: grid; gap: 8px; }
+        .mobile-card-actions { margin-top: 15px; display: flex; gap: 10px; }
+        .mobile-card-actions .btn { flex: 1; text-align: center; padding: 12px; font-size: 1em; display: flex; justify-content: center; align-items: center; gap: 5px; }
+
+        /* Modal Responsive */
+        .modal-content { width: 95%; padding: 20px; max-height: 85vh; }
+        .form-group input, .form-group select, .form-group textarea { font-size: 16px; /* Prevent zoom on iOS */ padding: 12px; }
+        .btn { padding: 12px; } /* Larger touch targets */
     }
     @media (min-width: 769px) {
         .mobile-list { display: none; }
@@ -461,7 +473,18 @@
         </div>
         <div class="form-group">
             <label>Feedback</label>
-            <textarea id="fNotes" rows="3" required placeholder="Customer response..."></textarea>
+            <select id="fNotesSelect" onchange="toggleFeedbackOther(this)">
+                <option value="">-- Select Response --</option>
+                <option value="Interested">Interested</option>
+                <option value="Thinking about it">Thinking about it</option>
+                <option value="Call Back Later">Call Back Later</option>
+                <option value="Wrong Number">Wrong Number</option>
+                <option value="No Answer">No Answer</option>
+                <option value="Not Interested">Not Interested</option>
+                <option value="Deal">Deal</option>
+                <option value="Other">Other...</option>
+            </select>
+            <textarea id="fNotesOther" rows="2" style="display:none; margin-top:5px;" placeholder="Please specify..."></textarea>
         </div>
         <div class="form-group">
             <label><input type="checkbox" id="fEmail"> Send Email to PIC</label>
@@ -1014,7 +1037,22 @@
         document.getElementById('clientIdRow').value = row;
         document.getElementById('followupInfo').innerHTML = '<strong>' + c.clientName + '</strong><br>Last Content: ' + (c.content||'None');
         document.getElementById('fContent').value = '';
+        document.getElementById('fNotesSelect').value = '';
+        toggleFeedbackOther(document.getElementById('fNotesSelect'));
         document.getElementById('followupModal').style.display = 'flex';
+    }
+
+    function toggleFeedbackOther(select) {
+        const other = document.getElementById('fNotesOther');
+        if (select.value === 'Other') {
+            other.style.display = 'block';
+            other.required = true;
+            other.focus();
+        } else {
+            other.style.display = 'none';
+            other.required = false;
+            other.value = '';
+        }
     }
 
     function openBulkFollowupModal() {
@@ -1022,7 +1060,8 @@
         document.getElementById('clientIdRow').value = JSON.stringify(selectedRows);
         document.getElementById('followupInfo').innerHTML = '<strong>Updating ' + selectedRows.length + ' clients</strong>';
         document.getElementById('fContent').value = '';
-        document.getElementById('fNotes').value = '';
+        document.getElementById('fNotesSelect').value = '';
+        toggleFeedbackOther(document.getElementById('fNotesSelect'));
         document.getElementById('followupModal').style.display = 'flex';
     }
 
@@ -1036,11 +1075,20 @@
             else { rows = [parseInt(rowVal)]; }
         } catch(e) { rows = [parseInt(rowVal)]; }
 
+        const selectVal = document.getElementById('fNotesSelect').value;
+        const otherVal = document.getElementById('fNotesOther').value;
+        const finalNotes = (selectVal === 'Other') ? otherVal : selectVal;
+
+        if (!finalNotes) {
+            alert("Please select a feedback option.");
+            return;
+        }
+
         const data = {
             date: document.getElementById('fDate').value,
             type: document.getElementById('fType').value,
             content: document.getElementById('fContent').value,
-            notes: document.getElementById('fNotes').value,
+            notes: finalNotes,
             sendEmail: document.getElementById('fEmail').checked
         };
 
