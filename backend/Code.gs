@@ -138,13 +138,19 @@ function syncContentValidation(sheet, settingsSheet) {
         // 1-based index calculation:
         // Start Col K(11) -> Date(11), Feedback(12), Content(13)
         // Next: K+3(14) -> Date(14), Feedback(15), Content(16)
+        const dateColIdx = 11 + (i * 3);
         const contentColIdx = 13 + (i * 3);
+
+        // Enforce Date Format
+        if (dateColIdx <= sheet.getMaxColumns()) {
+            sheet.getRange(2, dateColIdx, numRows, 1).setNumberFormat("yyyy-MM-dd");
+        }
 
         if (contentColIdx <= sheet.getMaxColumns()) {
             sheet.getRange(2, contentColIdx, numRows, 1).setDataValidation(rule);
         }
     }
-    Logger.log("Content validation synced.");
+    Logger.log("Content validation synced and Date formats enforced.");
 }
 
 function safeMigrateData(sheet) {
@@ -255,9 +261,17 @@ function getAllClients(simpleMode) {
 
           if (dateColIdx >= row.length) break;
 
-          const dateVal = row[dateColIdx];
+          let dateVal = row[dateColIdx];
           const feedbackVal = (feedbackColIdx < row.length) ? row[feedbackColIdx] : '';
           const contentVal = (contentColIdx < row.length) ? row[contentColIdx] : '';
+
+          // Robust Date Parsing: Handle Strings if formatting failed
+          if (dateVal && typeof dateVal === 'string') {
+              const parsed = new Date(dateVal);
+              if (!isNaN(parsed.getTime())) {
+                  dateVal = parsed;
+              }
+          }
 
           if (dateVal && dateVal instanceof Date) {
             if (!simpleMode) {
@@ -393,7 +407,19 @@ function saveFollowupInternal(sheet, clientRow, followupData) {
     contentColumn = lastIdx + 3;
   }
 
-  const followupDate = new Date(followupData.date);
+  // Ensure valid date object
+  let followupDate = null;
+  if (followupData.date) {
+      // Parse explicitly to avoid invalid dates
+      followupDate = new Date(followupData.date);
+      // Check validity
+      if (isNaN(followupDate.getTime())) {
+          followupDate = new Date(); // Fallback to today if invalid
+      }
+  } else {
+      followupDate = new Date(); // Fallback to today if missing
+  }
+
   sheet.getRange(clientRow, dateColumn).setValue(followupDate);
   sheet.getRange(clientRow, feedbackColumn).setValue(followupData.notes);
 
