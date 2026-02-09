@@ -70,7 +70,8 @@ function checkAndRepairHeaders() {
             }
         }
         if (match) {
-            // Headers are perfect. Skip migration for performance.
+            // Headers are perfect. Skip migration but ensure validation is synced.
+            syncContentValidation(sheet, settingsSheet);
             return;
         }
     }
