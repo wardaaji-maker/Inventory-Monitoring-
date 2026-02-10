@@ -378,6 +378,25 @@
       </div>
 
       <div class="main-content">
+        <!-- Global Toolbar for Lists -->
+        <div id="listToolbar" style="display:none; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px;">
+            <div style="display:flex; align-items:center;">
+                <h2 id="listTitle" style="color:var(--dark); margin:0;">Client Management</h2>
+                <div id="bulkActions" style="display:none; margin-left: 15px;">
+                    <button onclick="openBulkFollowupModal()" class="btn" style="background:var(--primary); color:white; padding:8px 12px; border:none; border-radius:5px; cursor:pointer;"><i class="fas fa-users-cog"></i> Update Selected (<span id="selectedCount">0</span>)</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <input type="text" id="search" placeholder="Search clients..." onkeyup="filterClients()" style="padding:10px; border:1px solid #ddd; border-radius:6px; min-width:200px;">
+              <select id="filterPic" onchange="filterClients()" style="padding:10px; border:1px solid #ddd; border-radius:6px;">
+                <option value="">All PIC</option>
+              </select>
+              <select id="filterContent" onchange="filterClients()" style="padding:10px; border:1px solid #ddd; border-radius:6px;">
+                <option value="">All Content</option>
+              </select>
+            </div>
+        </div>
+
         <!-- Dashboard Tab -->
         <div id="dashboardTab" class="tab-content active">
           <!-- Summary Section (Top) -->
@@ -397,23 +416,6 @@
 
         <!-- Clients Tab -->
         <div id="clientsTab" class="tab-content">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px;">
-            <div style="display:flex; align-items:center;">
-                <h2 style="color:var(--dark); margin:0;">Client Management</h2>
-                <div id="bulkActions" style="display:none; margin-left: 15px;">
-                    <button onclick="openBulkFollowupModal()" class="btn" style="background:var(--primary); color:white; padding:8px 12px; border:none; border-radius:5px; cursor:pointer;"><i class="fas fa-users-cog"></i> Update Selected (<span id="selectedCount">0</span>)</button>
-                </div>
-            </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
-              <input type="text" id="search" placeholder="Search clients..." onkeyup="filterClients()" style="padding:10px; border:1px solid #ddd; border-radius:6px; min-width:200px;">
-              <select id="filterPic" onchange="filterClients()" style="padding:10px; border:1px solid #ddd; border-radius:6px;">
-                <option value="">All PIC</option>
-              </select>
-              <select id="filterContent" onchange="filterClients()" style="padding:10px; border:1px solid #ddd; border-radius:6px;">
-                <option value="">All Content</option>
-              </select>
-            </div>
-          </div>
           <div class="data-table-container">
              <div id="clientsLoader" class="loading-overlay"><div class="loading-spinner"></div></div>
              <div id="clientsContent"></div>
@@ -423,7 +425,6 @@
 
         <!-- Due Today Tab -->
         <div id="dueTab" class="tab-content">
-          <h2 style="color:var(--dark); margin-bottom:20px;">Due for Follow-up</h2>
           <div class="data-table-container">
              <div id="dueLoader" class="loading-overlay"><div class="loading-spinner"></div></div>
              <div id="dueContent"></div>
@@ -433,7 +434,6 @@
 
         <!-- Overdue Tab -->
         <div id="overdueTab" class="tab-content">
-          <h2 style="color:var(--dark); margin-bottom:20px;">Overdue Follow-ups</h2>
           <div class="data-table-container">
              <div id="overdueLoader" class="loading-overlay"><div class="loading-spinner"></div></div>
              <div id="overdueContent"></div>
@@ -985,6 +985,20 @@
         if (targetBtn) targetBtn.classList.add('active');
 
         localStorage.setItem('currentTab', id);
+
+        // Toggle Toolbar
+        const toolbar = document.getElementById('listToolbar');
+        if (id === 'dashboard') {
+            toolbar.style.display = 'none';
+        } else {
+            toolbar.style.display = 'flex';
+            const titles = {
+                'clients': 'All Clients',
+                'due': 'Due for Follow-up',
+                'overdue': 'Overdue Follow-ups'
+            };
+            document.getElementById('listTitle').textContent = titles[id] || 'Client Management';
+        }
 
         // Fetch Data Logic
         if (id === 'clients') {

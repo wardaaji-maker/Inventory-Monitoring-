@@ -147,10 +147,11 @@ function syncContentValidation(sheet, settingsSheet) {
         }
 
         if (contentColIdx <= sheet.getMaxColumns()) {
-            sheet.getRange(2, contentColIdx, numRows, 1).setDataValidation(rule);
+            // Removed validation as per user request to allow any input from frontend
+            sheet.getRange(2, contentColIdx, numRows, 1).clearDataValidation();
         }
     }
-    Logger.log("Content validation synced and Date formats enforced.");
+    Logger.log("Content validation removed and Date formats enforced.");
 }
 
 function safeMigrateData(sheet) {
@@ -420,7 +421,10 @@ function saveFollowupInternal(sheet, clientRow, followupData) {
       followupDate = new Date(); // Fallback to today if missing
   }
 
-  sheet.getRange(clientRow, dateColumn).setValue(followupDate);
+  // Force format before setting value to ensure it's treated as a date
+  const dateCell = sheet.getRange(clientRow, dateColumn);
+  dateCell.setNumberFormat("yyyy-MM-dd");
+  dateCell.setValue(followupDate);
   sheet.getRange(clientRow, feedbackColumn).setValue(followupData.notes);
 
   const contentToSave = followupData.content || followupData.progress;
