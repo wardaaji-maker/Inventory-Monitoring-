@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root { --primary: #3498db; --success: #2ecc71; --warning: #f39c12; --danger: #e74c3c; --dark: #2c3e50; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f4f7f9; padding: 20px; margin: 0; }
+    .container { max-width: 1400px; margin: 0 auto; display: flex; flex-direction: column; height: 95vh; }
+    .header { background: white; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 20px; }
+    .stat-card { background: white; padding: 20px; border-radius: 10px; text-align: center; }
+    .content { display: flex; gap: 20px; flex: 1; overflow: hidden; }
+    .sidebar { width: 250px; background: white; padding: 20px; border-radius: 10px; display: flex; flex-direction: column; gap: 10px; }
+    .sidebar button { padding: 12px; border: none; background: none; text-align: left; cursor: pointer; border-radius: 5px; }
+    .sidebar button.active { background: #e8f4fc; color: var(--primary); font-weight: bold; }
+    .main-content { flex: 1; background: white; padding: 25px; border-radius: 10px; overflow-y: auto; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+    .data-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+    .data-table th, .data-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+    .btn { padding: 8px 16px; border: none; border-radius: 5px; cursor: pointer; background: #e0e0e0; }
+    .btn-success { background: var(--success); color: white; }
+    .btn-wa { background: #25D366; color: white; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+    .modal-content { background: white; padding: 30px; border-radius: 10px; width: 600px; max-width: 90%; max-height: 90vh; overflow-y: auto; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+    .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+
+    /* Mobile Styles */
+    @media (max-width: 768px) {
+        .container { height: auto; padding: 10px; }
+        .content { flex-direction: column; overflow: visible; }
+        .sidebar { width: 100%; flex-direction: row; overflow-x: auto; padding: 10px; gap: 10px; box-sizing: border-box; }
+        .sidebar button { flex: 0 0 auto; white-space: nowrap; }
+        .stats-grid { grid-template-columns: 1fr 1fr; }
+        .header { flex-direction: column; gap: 10px; text-align: center; }
+        .main-content { padding: 15px; }
+
+        .data-table { display: none; } /* Hide table on mobile */
+        .mobile-list { display: block; }
+        .mobile-card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid #eee; }
+        .mobile-card-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: bold; align-items: center; }
+        .mobile-card-body { font-size: 0.9em; color: #555; display: grid; gap: 5px; }
+        .mobile-card-actions { margin-top: 15px; display: flex; gap: 10px; }
+        .mobile-card-actions .btn { flex: 1; text-align: center; }
+    }
+    @media (min-width: 769px) {
+        .mobile-list { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1><i class="fas fa-building"></i> Client Follow-up Monitor</h1>
+      <div>
+        <button onclick="openBulkWa()" class="btn btn-wa"><i class="fab fa-whatsapp"></i> Bulk WA</button>
+        <button onclick="exportData()" class="btn"><i class="fas fa-download"></i> Export</button>
+      </div>
+    </div>
+
+    <div id="statsGrid" class="stats-grid"></div>
+
+    <div class="content">
+      <div class="sidebar">
+        <button onclick="showTab('dashboard')" id="btn-dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</button>
+        <button onclick="showTab('clients')" id="btn-clients"><i class="fas fa-users"></i> All Clients</button>
+        <button onclick="showTab('due')" id="btn-due"><i class="fas fa-bell"></i> Due Today</button>
+        <button onclick="showTab('overdue')" id="btn-overdue"><i class="fas fa-exclamation-triangle"></i> Overdue</button>
+      </div>
+
+      <div class="main-content">
+        <div id="dashboardTab" class="tab-content active">
+          <h2>Dashboard</h2>
+          <div id="dashboardContent"></div>
+        </div>
+
+        <div id="clientsTab" class="tab-content">
+          <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:center;">
+            <div style="display:flex; align-items:center;">
+                <h2>All Clients</h2>
+                <div id="bulkActions" style="display:none; margin-left: 15px;">
+                    <button onclick="openBulkFollowupModal()" class="btn" style="background:#3498db; color:white;"><i class="fas fa-users-cog"></i> Update Selected (<span id="selectedCount">0</span>)</button>
+                </div>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap: wrap;">
+              <input type="text" id="search" placeholder="Search..." onkeyup="filterClients()" style="padding:8px; border:1px solid #ddd; border-radius:5px;">
+              <select id="filterPic" onchange="filterClients()" style="padding:8px; border:1px solid #ddd; border-radius:5px;">
+                  <option value="">All PIC</option>
+              </select>
+              <select id="filterContent" onchange="filterClients()" style="padding:8px; border:1px solid #ddd; border-radius:5px;">
+                  <option value="">All Content</option>
+              </select>
+            </div>
+          </div>
+          <div id="clientsContent"></div>
+        </div>
+
+        <div id="dueTab" class="tab-content">
+          <h2>Due Today</h2>
+          <div id="dueContent"></div>
+        </div>
+
+        <div id="overdueTab" class="tab-content">
+          <h2>Overdue</h2>
+          <div id="overdueContent"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Follow Up Modal -->
+  <div id="followupModal" class="modal">
+    <div class="modal-content">
+      <h2>Record Follow-up</h2>
+      <div id="followupInfo" style="background:#f8f9fa; padding:15px; border-radius:5px; margin-bottom:15px;"></div>
+      <form id="followupForm">
+        <input type="hidden" id="clientIdRow">
+        <div class="form-group">
+            <label>Date</label>
+            <input type="date" id="fDate" required>
+        </div>
+        <div class="form-group">
+            <label>Type</label>
+            <select id="fType">
+                <option value="WA">WhatsApp</option>
+                <option value="Call">Call</option>
+                <option value="Visit">Visit</option>
+                <option value="Email">Email</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Content (Promotion)</label>
+            <select id="fContent" required>
+                <option value="">Loading...</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Feedback</label>
+            <textarea id="fNotes" rows="3" required placeholder="Customer response..."></textarea>
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" id="fEmail"> Send Email to PIC</label>
+        </div>
+        <button type="submit" class="btn btn-success">Save</button>
+        <button type="button" class="btn" onclick="closeModal('followupModal')">Cancel</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Bulk WA Modal -->
+  <div id="bulkWaModal" class="modal">
+    <div class="modal-content">
+      <h2>Bulk WhatsApp</h2>
+      <p>Generate WhatsApp links for clients needing follow-up.</p>
+      <div id="bulkWaContent" style="max-height:400px; overflow-y:auto;"></div>
+      <div style="margin-top:20px; text-align:right;">
+          <button class="btn" onclick="closeModal('bulkWaModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client Details Modal -->
+  <div id="clientDetailsModal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+      <h2>Client Details</h2>
+      <div id="clientDetailsContent">
+        <!-- Loaded dynamically -->
+      </div>
+      <div style="text-align: center; margin-top: 20px;">
+        <button class="btn" onclick="closeModal('clientDetailsModal')">
+          <i class="fas fa-times"></i> Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let clients = [];
+    let selectedRows = [];
+
+    function init() {
+        document.getElementById('fDate').valueAsDate = new Date();
+        loadDashboard();
+        loadClients();
+        loadPromotions();
+
+        document.getElementById('followupForm').onsubmit = function(e) {
+            e.preventDefault();
+            saveFollowup();
+        };
+
+        // Restore State
+        const savedTab = localStorage.getItem('currentTab') || 'dashboard';
+        showTab(savedTab);
+
+        const savedSearch = localStorage.getItem('search');
+        if(savedSearch) document.getElementById('search').value = savedSearch;
+    }
+
+    function loadPromotions() {
+        google.script.run.withSuccessHandler(function(types) {
+            // Modal Dropdown
+            const sel = document.getElementById('fContent');
+            sel.innerHTML = '<option value="">-- Select Content --</option>';
+            // Filter Dropdown
+            const filterSel = document.getElementById('filterContent');
+            filterSel.innerHTML = '<option value="">All Content</option>';
+
+            types.forEach(function(t) {
+                // Modal
+                const opt = document.createElement('option');
+                opt.value = t; opt.textContent = t;
+                sel.appendChild(opt);
+
+                // Filter
+                const filterOpt = document.createElement('option');
+                filterOpt.value = t; filterOpt.textContent = t;
+                filterSel.appendChild(filterOpt);
+            });
+
+            // Restore Filters
+            const savedContent = localStorage.getItem('filterContent');
+            if(savedContent) {
+                filterSel.value = savedContent;
+                filterClients(); // Re-trigger filter
+            }
+        }).getPromotionTypes();
+    }
+
+    function loadDashboard() {
+        google.script.run.withSuccessHandler(renderDashboard).getDashboardStats();
+    }
+
+    function renderDashboard(stats) {
+        // Stats Grid
+        document.getElementById('statsGrid').innerHTML = `
+            <div class="stat-card"><h1>${stats.totalClients}</h1><p>Total Clients</p></div>
+            <div class="stat-card"><h1>${stats.dueFollowups}</h1><p>Due Today</p></div>
+            <div class="stat-card"><h1 style="color:#e74c3c">${stats.overdueClients}</h1><p>Overdue</p></div>
+            <div class="stat-card"><h1>${stats.avgFollowUps}</h1><p>Avg Follow-ups</p></div>
+        `;
+
+        // Breakdowns
+        let html = '<div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">';
+
+        // Content
+        html += createChartCard('Content Breakdown', stats.contentCounts);
+        // Feedback
+        html += createChartCard('Feedback Breakdown', stats.feedbackCounts);
+        // Store
+        html += createChartCard('Store Performance', stats.storeStats, true);
+        // PIC
+        html += createChartCard('PIC Performance', stats.picStats, true);
+
+        html += '</div>';
+        document.getElementById('dashboardContent').innerHTML = html;
+    }
+
+    function createChartCard(title, data, isComplex) {
+        let html = `<div style="background:white; padding:15px; border-radius:5px; box-shadow:0 1px 3px rgba(0,0,0,0.1);"><h3>${title}</h3>`;
+        if (isComplex) {
+            Object.entries(data).forEach(function(entry) {
+                const key = entry[0];
+                const val = entry[1];
+                html += `<div style="margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <strong style="font-size:1.1em;">${key}</strong>
+                        <span style="background:#e8f4fc; padding:2px 8px; border-radius:10px; font-size:0.9em;">${val.contribution}%</span>
+                    </div>
+                    <div style="font-size:0.9em; color:#666; margin-top:5px;">
+                        Total: ${val.total} | Followed-up: ${val.followedUp}
+                    </div>
+                    <div style="margin-top:8px; font-size:0.85em; padding-left:10px; border-left:2px solid #ddd;">
+                        <div style="font-weight:bold; color:#555;">Top Content:</div>
+                        ${Object.entries(val.content || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
+                            `<span style="margin-right:10px;">${e[0]}: ${e[1]}</span>`
+                        ).join('') || 'None'}
+
+                        <div style="font-weight:bold; color:#555; margin-top:5px;">Top Feedback:</div>
+                        ${Object.entries(val.feedback || {}).sort((a,b)=>b[1]-a[1]).slice(0,3).map(e =>
+                            `<span style="margin-right:10px;">${e[0]}: ${e[1]}</span>`
+                        ).join('') || 'None'}
+                    </div>
+                </div>`;
+            });
+        } else {
+            Object.entries(data).forEach(function(entry) {
+                const key = entry[0];
+                const val = entry[1];
+                html += `<div style="display:flex; justify-content:space-between; border-bottom:1px solid #eee; padding:5px 0;">
+                    <span>${key}</span> <strong>${val}</strong>
+                </div>`;
+            });
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function loadClients() {
+        google.script.run.withSuccessHandler(function(data) {
+            clients = data;
+            populateFilters();
+            renderTable(clients, 'clientsContent');
+
+            // Due/Overdue
+            const due = clients.filter(function(c) {
+                 if(!c.nextFollowUp) return false;
+                 const d = new Date(c.nextFollowUp); d.setHours(0,0,0,0);
+                 const today = new Date(); today.setHours(0,0,0,0);
+                 return d.getTime() <= today.getTime();
+            });
+            renderTable(due, 'dueContent', false);
+
+            const overdue = clients.filter(function(c) { return c.overdueFollowUps > 0; });
+            renderTable(overdue, 'overdueContent', false);
+
+            // Restore Filters triggering (if already populated)
+            const savedPic = localStorage.getItem('filterPic');
+            if(savedPic && document.getElementById('filterPic').options.length > 1) {
+                document.getElementById('filterPic').value = savedPic;
+                filterClients();
+            }
+
+        }).getAllClients();
+    }
+
+    function populateFilters() {
+        const uniquePics = new Set();
+        clients.forEach(function(c) { if(c.pic) uniquePics.add(c.pic); });
+
+        const sel = document.getElementById('filterPic');
+        sel.innerHTML = '<option value="">All PIC</option>';
+        uniquePics.forEach(function(p) {
+            const opt = document.createElement('option');
+            opt.value = p; opt.textContent = p;
+            sel.appendChild(opt);
+        });
+
+        const savedPic = localStorage.getItem('filterPic');
+        if(savedPic) {
+            sel.value = savedPic;
+        }
+    }
+
+    function filterClients() {
+        const term = document.getElementById('search').value.toLowerCase();
+        const pic = document.getElementById('filterPic').value;
+        const content = document.getElementById('filterContent').value;
+
+        // Save state
+        localStorage.setItem('search', term);
+        localStorage.setItem('filterPic', pic);
+        localStorage.setItem('filterContent', content);
+
+        const filtered = clients.filter(function(c) {
+            const matchTerm = c.clientName.toLowerCase().includes(term) || c.clientId.toLowerCase().includes(term);
+            const matchPic = !pic || c.pic === pic;
+            const matchContent = !content || c.content === content;
+            return matchTerm && matchPic && matchContent;
+        });
+        renderTable(filtered, 'clientsContent');
+    }
+
+    function renderTable(data, containerId, withCheckboxes) {
+        if (withCheckboxes === undefined) withCheckboxes = true;
+        const div = document.getElementById(containerId);
+        if (!data.length) { div.innerHTML = 'No data.'; return; }
+
+        let headerCheckbox = withCheckboxes ? `<th style="width:30px;"><input type="checkbox" id="selectAll" onclick="toggleSelectAll()"></th>` : '';
+
+        // Desktop
+        let html = `<table class="data-table"><thead><tr>
+            ${headerCheckbox}
+            <th>ID</th><th>Name</th><th>PIC</th><th>Latest Content</th><th>Latest Feedback</th><th>Next Follow-up</th><th>Actions</th>
+        </tr></thead><tbody>`;
+
+        // Mobile
+        let mobileHtml = '<div class="mobile-list">';
+
+        data.forEach(function(c) {
+            const next = c.nextFollowUp ? new Date(c.nextFollowUp).toLocaleDateString() : '-';
+            let rowCheckbox = withCheckboxes ? `<td><input type="checkbox" class="client-checkbox" value="${c.row}" onclick="updateSelection()"></td>` : '';
+            let cardCheckbox = withCheckboxes ? `<input type="checkbox" class="client-checkbox" value="${c.row}" onclick="updateSelection()">` : '';
+
+            // Table Row
+            html += `<tr>
+                ${rowCheckbox}
+                <td>${c.clientId}</td>
+                <td>${c.clientName}<br><small>${c.phone}</small></td>
+                <td>${c.pic||'-'}</td>
+                <td>${c.content||'-'}</td>
+                <td>${c.latestFeedback||'-'}</td>
+                <td style="${c.overdueFollowUps>0?'color:red':''}">${next}</td>
+                <td>
+                    <button class="btn" onclick="openFollowup(${c.row})" title="Add Follow-up"><i class="fas fa-plus"></i></button>
+                    <button class="btn" onclick="viewClientDetails(${c.row})" title="View History"><i class="fas fa-eye"></i></button>
+                    ${c.phone ? `<button class="btn btn-wa" onclick="sendSingleWa('${c.phone}', ${c.row})" title="WhatsApp"><i class="fab fa-whatsapp"></i></button>` : ''}
+                </td>
+            </tr>`;
+
+            // Mobile Card
+            mobileHtml += `
+            <div class="mobile-card">
+               <div class="mobile-card-header">
+                  <div style="display:flex; align-items:center; gap:10px;">
+                      ${cardCheckbox}
+                      <span>${c.clientName}</span>
+                  </div>
+                  <span style="font-size:0.8em; background:#e8f4fc; padding:2px 6px; border-radius:4px;">${c.clientId}</span>
+               </div>
+               <div class="mobile-card-body">
+                  <div><i class="fas fa-tag"></i> Latest Content: ${c.content || '-'}</div>
+                  <div><i class="fas fa-comment"></i> Feedback: ${c.latestFeedback || '-'}</div>
+                  <div style="${c.overdueFollowUps>0?'color:#e74c3c':''}"><i class="fas fa-clock"></i> Next: ${next}</div>
+                  <div><i class="fas fa-user"></i> PIC: ${c.pic || '-'}</div>
+               </div>
+               <div class="mobile-card-actions">
+                  <button class="btn" onclick="openFollowup(${c.row})"><i class="fas fa-edit"></i> Follow-up</button>
+                  <button class="btn" onclick="viewClientDetails(${c.row})"><i class="fas fa-eye"></i> History</button>
+                  ${c.phone ? `<button class="btn btn-wa" onclick="sendSingleWa('${c.phone}', ${c.row})"><i class="fab fa-whatsapp"></i> Chat</button>` : ''}
+               </div>
+            </div>`;
+        });
+        html += '</tbody></table>';
+
+        mobileHtml += '</div>';
+
+        div.innerHTML = html + mobileHtml;
+
+        if(withCheckboxes) {
+            updateSelection();
+        }
+    }
+
+    // Selection Logic
+    function toggleSelectAll() {
+        const main = document.getElementById('selectAll');
+        // Select both desktop and mobile checkboxes
+        const boxes = document.querySelectorAll('.client-checkbox');
+        for (let i = 0; i < boxes.length; i++) {
+            boxes[i].checked = main.checked;
+        }
+        updateSelection();
+    }
+
+    function updateSelection() {
+        const boxes = document.querySelectorAll('.client-checkbox:checked');
+        const uniqueRows = new Set();
+        for (let i = 0; i < boxes.length; i++) {
+            uniqueRows.add(parseInt(boxes[i].value));
+        }
+        selectedRows = Array.from(uniqueRows);
+
+        const countSpan = document.getElementById('selectedCount');
+        const bulkDiv = document.getElementById('bulkActions');
+
+        if (countSpan && bulkDiv) {
+            countSpan.textContent = selectedRows.length;
+            bulkDiv.style.display = selectedRows.length > 0 ? 'block' : 'none';
+        }
+    }
+
+    function openBulkFollowupModal() {
+        if(selectedRows.length === 0) return;
+
+        document.getElementById('clientIdRow').value = JSON.stringify(selectedRows);
+        document.getElementById('followupInfo').innerHTML = `<strong>Updating ${selectedRows.length} clients</strong>`;
+
+        document.getElementById('fContent').value = '';
+        document.getElementById('fNotes').value = '';
+
+        document.getElementById('followupModal').style.display = 'flex';
+    }
+
+    function openFollowup(row) {
+        const c = clients.find(function(x) { return x.row === row; });
+        if(!c) return;
+        document.getElementById('clientIdRow').value = row;
+        document.getElementById('followupInfo').innerHTML = `<strong>${c.clientName}</strong><br>Last Content: ${c.content||'None'}`;
+        // Reset content to force selection for next blast or leave empty
+        document.getElementById('fContent').value = '';
+        document.getElementById('followupModal').style.display = 'flex';
+    }
+
+    function viewClientDetails(row) {
+        const c = clients.find(function(x) { return x.row === row; });
+        if(!c) return;
+
+        // Show loading state
+        document.getElementById('clientDetailsContent').innerHTML = '<p>Loading history...</p>';
+        document.getElementById('clientDetailsModal').style.display = 'flex';
+
+        google.script.run.withSuccessHandler(function(history) {
+            let html = `
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:20px;">
+                    <div>
+                        <h3 style="margin-top:0;">${c.clientName}</h3>
+                        <p><strong>ID:</strong> ${c.clientId}</p>
+                        <p><strong>Phone:</strong> ${c.phone||'-'}</p>
+                        <p><strong>Email:</strong> ${c.email||'-'}</p>
+                        <p><strong>Store:</strong> ${c.storeCode||'-'}</p>
+                    </div>
+                    <div>
+                        <p><strong>Status:</strong> ${c.status||'-'}</p>
+                        <p><strong>Latest Content:</strong> ${c.content||'-'}</p>
+                        <p><strong>Latest Feedback:</strong> ${c.latestFeedback||'-'}</p>
+                        <p><strong>PIC:</strong> ${c.pic||'-'}</p>
+                    </div>
+                </div>
+                <h3>Follow-up History</h3>
+            `;
+
+            if (history && history.length > 0) {
+                html += '<div style="max-height:300px; overflow-y:auto;"><table class="data-table"><thead><tr><th>Date</th><th>Feedback</th><th>Content</th></tr></thead><tbody>';
+                history.forEach(function(h) {
+                    html += `<tr>
+                        <td>${new Date(h.date).toLocaleDateString()}</td>
+                        <td>${h.feedback}</td>
+                        <td>${h.content}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table></div>';
+            } else {
+                html += '<p>No history found.</p>';
+            }
+
+            document.getElementById('clientDetailsContent').innerHTML = html;
+        }).getClientFollowupHistory(row);
+    }
+
+    function closeFollowup() {
+        document.getElementById('followupModal').style.display = 'none';
+    }
+
+    function saveFollowup() {
+        const rowVal = document.getElementById('clientIdRow').value;
+        let isBulk = false;
+        let rows = [];
+
+        try {
+            if (rowVal.startsWith('[')) {
+                rows = JSON.parse(rowVal);
+                isBulk = true;
+            } else {
+                rows = [parseInt(rowVal)];
+            }
+        } catch(e) {
+            rows = [parseInt(rowVal)];
+        }
+
+        const data = {
+            date: document.getElementById('fDate').value,
+            type: document.getElementById('fType').value,
+            content: document.getElementById('fContent').value,
+            notes: document.getElementById('fNotes').value,
+            sendEmail: document.getElementById('fEmail').checked
+            // status: 'LEADS' - Removed to prevent overwriting existing status
+        };
+
+        const handler = google.script.run.withSuccessHandler(function() {
+            alert('Saved');
+            closeModal('followupModal');
+            loadClients();
+            loadDashboard();
+            selectedRows = [];
+            if(document.getElementById('bulkActions')) {
+                document.getElementById('bulkActions').style.display = 'none';
+            }
+        });
+
+        if(isBulk) {
+            handler.recordBulkFollowup(rows, data);
+        } else {
+            handler.recordFollowup(rows[0], data);
+        }
+    }
+
+    function sendSingleWa(phone, row) {
+        let p = phone.replace(/\D/g,'');
+        if(p.startsWith('0')) p = '62' + p.substring(1);
+        const url = `https://wa.me/${p}`;
+        window.open(url, '_blank');
+        openFollowup(row);
+    }
+
+    function openBulkWa() {
+        const due = clients.filter(function(c) {
+            if(!c.nextFollowUp) return false;
+             const d = new Date(c.nextFollowUp); d.setHours(0,0,0,0);
+             const today = new Date(); today.setHours(0,0,0,0);
+             return d.getTime() <= today.getTime() && c.phone;
+        });
+
+        let html = '<ul style="list-style:none; padding:0;">';
+        due.forEach(function(c) {
+             let p = c.phone.replace(/\D/g,'');
+             if(p.startsWith('0')) p = '62' + p.substring(1);
+             html += `<li style="margin-bottom:10px; padding:10px; border:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                <span>${c.clientName} (${c.phone})</span>
+                <a href="https://wa.me/${p}" target="_blank" class="btn btn-wa" onclick="openFollowup(${c.row})">Chat</a>
+             </li>`;
+        });
+        html += '</ul>';
+        if(due.length === 0) html = '<p>No clients due for follow-up with phone numbers.</p>';
+        document.getElementById('bulkWaContent').innerHTML = html;
+        document.getElementById('bulkWaModal').style.display = 'flex';
+    }
+
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
+    function showTab(id) {
+        const tabs = document.querySelectorAll('.tab-content');
+        for (let i = 0; i < tabs.length; i++) {
+            tabs[i].style.display = 'none';
+        }
+
+        const btns = document.querySelectorAll('.sidebar button');
+        for (let i = 0; i < btns.length; i++) {
+            btns[i].classList.remove('active');
+        }
+
+        const targetTab = document.getElementById(id + 'Tab');
+        if (targetTab) targetTab.style.display = 'block';
+
+        const targetBtn = document.getElementById('btn-' + id);
+        if (targetBtn) targetBtn.classList.add('active');
+
+        localStorage.setItem('currentTab', id);
+    }
+
+    function exportData() {
+        google.script.run.withSuccessHandler(function(res) {
+            alert("Export generated: " + res.filename);
+        }).exportClientData();
+    }
+
+    window.onload = init;
+  </script>
+</body>
+</html>
