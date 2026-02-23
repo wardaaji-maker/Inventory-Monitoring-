@@ -97,6 +97,52 @@ function createEvent(eventName) {
   }
 }
 
+function deleteEvent(eventId) {
+  try {
+    if (!eventId) {
+      return { success: false, error: "Cannot delete the Main Event" };
+    }
+
+    const ss = SpreadsheetApp.openById(CONFIG.sheetId);
+
+    // 1. Delete the Event Entry
+    const eventsSheet = getSheet('events');
+    const data = eventsSheet.getDataRange().getValues();
+    let rowToDelete = -1;
+
+    // Assuming EventID is column index 1 (0-based) based on ['EventName', 'EventID', ...]
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][1] === eventId) {
+        rowToDelete = i + 1; // 1-based row index
+        break;
+      }
+    }
+
+    if (rowToDelete > 0) {
+      eventsSheet.deleteRow(rowToDelete);
+    } else {
+      return { success: false, error: "Event not found in registry" };
+    }
+
+    // 2. Delete Associated Sheets
+    Object.keys(CONFIG.eventSheets).forEach(key => {
+      const baseName = CONFIG.eventSheets[key];
+      const sheetName = baseName + eventId;
+      const sheet = ss.getSheetByName(sheetName);
+      if (sheet) {
+        ss.deleteSheet(sheet);
+        Logger.log(`Deleted sheet: ${sheetName}`);
+      }
+    });
+
+    return { success: true, message: "Event and associated data deleted successfully" };
+
+  } catch (e) {
+    Logger.log(`Error deleting event ${eventId}: ${e.toString()}`);
+    return { success: false, error: e.toString() };
+  }
+}
+
 function getTeamMembers() {
   return ['HERU', 'FAHMY', 'HILLARY', 'DWI PUJI', 'RIZKY M.', 'MELLINDA', 'NANA', 'SYAFEI', 'RIZKI PIK', 'DESI', 'DIMAS', 'DANU', 'CISCO', 'DESTIAN','AJI','FARIED','BARREL','DEVITA','RIDHA','MONIC','DWI','FAJARWATI','DODI','FAJAR'];
 }

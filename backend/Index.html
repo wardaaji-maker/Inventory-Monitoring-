@@ -50,6 +50,9 @@
                         <button class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#createEventModal">
                             <i class="fas fa-plus"></i> New Event
                         </button>
+                        <button class="btn btn-sm btn-outline-danger ms-2" id="deleteEventBtn" onclick="deleteCurrentEvent()" style="display: none;">
+                            <i class="fas fa-trash"></i> Delete Event
+                        </button>
                     </li>
                     <li class="nav-item">
                         <span class="navbar-text" id="userInfo">
@@ -504,6 +507,14 @@
             currentEventId = eventId;
             console.log('Switching to event:', eventId);
 
+            // Toggle Delete Button
+            const deleteBtn = document.getElementById('deleteEventBtn');
+            if (eventId) {
+                deleteBtn.style.display = 'inline-block';
+            } else {
+                deleteBtn.style.display = 'none';
+            }
+
             // Clear current view
             document.getElementById('leadsContainer').innerHTML = '<div class="text-center mt-5"><div class="spinner-border"></div><div class="mt-2">Loading event data...</div></div>';
 
@@ -511,6 +522,33 @@
             document.getElementById('statTotal').textContent = '...';
 
             loadLeads();
+        }
+
+        function deleteCurrentEvent() {
+            if (!currentEventId) return;
+
+            if (confirm("Are you sure you want to DELETE this event and ALL its associated data (Leads, Follow-ups, etc.)? This action CANNOT be undone.")) {
+                const btn = document.getElementById('deleteEventBtn');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Deleting...';
+
+                google.script.run.withSuccessHandler(function(res) {
+                    if (res.success) {
+                        alert('Event deleted successfully.');
+                        currentEventId = ''; // Reset to Main
+                        loadEvents(); // Reload list and default to main
+                    } else {
+                        alert('Error deleting event: ' + res.error);
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
+                }).withFailureHandler(function(error) {
+                    alert('Script error: ' + error);
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }).deleteEvent(currentEventId);
+            }
         }
 
         function createNewEvent() {
