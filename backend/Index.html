@@ -534,14 +534,16 @@
                 btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Deleting...';
 
                 google.script.run.withSuccessHandler(function(res) {
+                    // Always reset button state
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+
                     if (res.success) {
                         alert('Event deleted successfully.');
-                        currentEventId = ''; // Reset to Main
-                        loadEvents(); // Reload list and default to main
+                        switchEvent(''); // Switch UI to Main Event (hides button, loads data)
+                        loadEvents();    // Reload dropdown to remove deleted event
                     } else {
                         alert('Error deleting event: ' + res.error);
-                        btn.disabled = false;
-                        btn.innerHTML = originalText;
                     }
                 }).withFailureHandler(function(error) {
                     alert('Script error: ' + error);
