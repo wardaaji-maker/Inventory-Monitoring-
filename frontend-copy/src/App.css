@@ -1,0 +1,82 @@
+.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+  margin-bottom: 20px;
+}
+
+.App-header h1 {
+  margin: 0;
+}
+
+nav {
+  margin-top: 15px;
+}
+
+nav button {
+  background-color: #61dafb;
+  border: none;
+  padding: 10px 20px;
+  margin: 0 10px;
+  cursor: pointer;
+  font-size: 16px;
+  border-radius: 5px;
+}
+
+nav button:hover {
+  background-color: #4fa8c4;
+}
+
+main {
+  padding: 20px;
+}
+
+table {
+  width: 80%;
+  margin: 20px auto;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+form {
+  margin: 20px auto;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  width: 50%;
+  max-width: 500px;
+}
+
+form input, form select, form button {
+  display: block;
+  width: 95%;
+  padding: 10px;
+  margin: 10px auto;
+  font-size: 16px;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+  width: 50%;
+  margin: 20px auto;
+}
+
+ul li {
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  padding: 10px;
+  margin-bottom: 5px;
+}
