@@ -216,8 +216,10 @@ function setupSheetHeaders(sheetName, sheet) {
 
       sheet.setFrozenRows(1);
 
-      for (let i = 1; i <= headers.length; i++) {
-        sheet.autoResizeColumn(i);
+      if (sheet.getLastRow() === 0 || sheet.getLastRow() === 1) {
+        for (let i = 1; i <= headers.length; i++) {
+          sheet.autoResizeColumn(i);
+        }
       }
 
       Logger.log(`Headers set up for ${sheetName}`);
@@ -1421,4 +1423,381 @@ function syncAllLeadNotes() {
     Logger.log(`Error during syncAllLeadNotes: ${e.toString()}`);
     ui.alert(`An error occurred: ${e.message}`);
   }
+}
+
+function getInitialData() {
+  try {
+    const teamMembers = getTeamMembers();
+    const statusOptions = getStatusOptions();
+    const sourceOptions = getSourceOptions();
+
+    return {
+      teamMembers: teamMembers,
+      statusOptions: statusOptions,
+      sourceOptions: sourceOptions
+    };
+
+  } catch (e) {
+    Logger.log('Error in getInitialData: ' + e.toString());
+    return {
+      teamMembers: [],
+      statusOptions: [],
+      sourceOptions: []
+    };
+  }
+}
+
+// --- HISTORICAL REPORTING AND BACKFILL LOGIC ---
+
+/**
+ * Main function to be run on a daily trigger or manually from the menu.
+ * It now backfills data for any missed days since the last successful run.
+ */
+function dailyUpdate() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  try {
+    Logger.log('Starting daily update with backfill logic...');
+
+    const lastRunDateStr = scriptProperties.getProperty('lastSuccessfulRunDate');
+    let startDate = new Date();
+    if (lastRunDateStr) {
+      startDate = new Date(lastRunDateStr);
+      startDate.setDate(startDate.getDate() + 1); // Start from the day after the last run.
+    } else {
+      // On the very first run, start from when the first lead was created.
+      const firstLeadDate = getFirstLeadDate();
+      startDate = firstLeadDate ? new Date(firstLeadDate) : new Date(new Date().setDate(new Date().getDate() - 30)); // Fallback
+    }
+    startDate.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (startDate >= today) {
+        Logger.log('Reports are already up-to-date.');
+        SpreadsheetApp.getUi().alert('Reports are already up-to-date!');
+        return;
+    }
+
+    let currentDate = new Date(startDate.getTime());
+    let lastProcessedDate = null;
+
+    Logger.log(`Backfilling reports from ${currentDate.toLocaleDateString()} until yesterday.`);
+    SpreadsheetApp.getUi().showSidebar(HtmlService.createHtmlOutput('<p>Processing historical data... This may take a few minutes.</p>').setTitle('Update in Progress'));
+
+    // Pre-fetch all data once to avoid multiple calls inside the loop
+    const allLeads = getLeads();
+    const allFollowUps = getSheet('followups').getDataRange().getValues(); // Includes headers
+
+    while (currentDate < today) {
+      const dateToProcess = new Date(currentDate.getTime());
+      Logger.log(`Processing reports for: ${dateToProcess.toLocaleDateString()}`);
+
+      // Pass prefetched data to the historical functions
+      updateMonthlyLeadSummaryForDate(dateToProcess, allLeads, allFollowUps);
+      updateDailyDashboardStatsForDate(dateToProcess, allLeads, allFollowUps);
+
+      lastProcessedDate = dateToProcess;
+
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    if (lastProcessedDate) {
+        scriptProperties.setProperty('lastSuccessfulRunDate', lastProcessedDate.toISOString());
+        Logger.log(`Successfully processed until ${lastProcessedDate.toLocaleDateString()}. Updated lastSuccessfulRunDate.`);
+    }
+
+    Logger.log('Daily update backfill completed successfully.');
+    SpreadsheetApp.getUi().alert('Daily reports have been successfully updated!');
+
+  } catch (e) {
+    Logger.log(`FATAL: Daily update failed: ${e.toString()}`);
+    SpreadsheetApp.getUi().alert(`An error occurred during the daily update: ${e.message}`);
+  }
+}
+
+/**
+ * Helper to get the date of the very first lead to avoid unnecessary back-filling.
+ */
+function getFirstLeadDate() {
+    const leadsSheet = getSheet('leads');
+    if (leadsSheet.getLastRow() < 2) {
+        return null;
+    }
+    // Assuming 'CreatedAt' is column G (index 7)
+    const firstDate = leadsSheet.getRange(2, 7).getValue();
+    return firstDate ? new Date(firstDate) : null;
+}
+
+/**
+ * Generates and logs the MonthlyLeadSummary for a specific historical date.
+ * This function is idempotent and reconstructs the state of leads for the given date.
+ */
+function updateMonthlyLeadSummaryForDate(dateToProcess, allLeadsData, allFollowUpsData) {
+  const summarySheet = getSheet('monthlyLeadSummary');
+  const endOfDateToProcess = new Date(dateToProcess);
+  endOfDateToProcess.setHours(23, 59, 59, 999);
+
+  // --- Make function idempotent: Delete today's existing records ---
+  const data = summarySheet.getDataRange().getValues();
+  for (let i = data.length - 1; i >= 1; i--) {
+    const recordDate = new Date(data[i][0]);
+    recordDate.setHours(0, 0, 0, 0);
+    if (recordDate.getTime() === dateToProcess.getTime()) {
+      summarySheet.deleteRow(i + 1);
+    }
+  }
+
+  // --- Historical Reconstruction Logic ---
+  const activeStatuses = ['Prospecting', 'Convincing', 'Negotiating', 'Won'];
+  let rowsToAdd = [];
+
+  for (const lead of allLeadsData) {
+    const createdAt = new Date(lead.CreatedAt);
+    if (createdAt > endOfDateToProcess) continue; // Skip leads created after the date we are processing.
+
+    // Determine the lead's state at the end of `dateToProcess`
+    let stateAtDate = {
+      status: lead.Status,
+      dealValue: lead.DealValue,
+      lastContact: new Date(lead.LastContact),
+      notes: lead.Notes
+    };
+
+    const relevantFollowUps = allFollowUpsData
+      .slice(1) // Skip header row
+      .filter(fu => fu[0] === lead.LeadID && new Date(fu[1]) <= endOfDateToProcess)
+      .sort((a, b) => new Date(a[1]) - new Date(b[1]));
+
+    let lastStatus = 'New';
+    let lastNote = lead.Notes;
+
+    for (const fu of relevantFollowUps) {
+      if (fu[3]) lastStatus = fu[3]; // Status is in column 4
+      if (fu[4]) lastNote = fu[4]; // Notes is in column 5
+    }
+
+    // The status from the main 'Leads' sheet is the most current one.
+    // We need to find the last status *before or on* the dateToProcess.
+    const lastRelevantFollowUp = relevantFollowUps[relevantFollowUps.length - 1];
+    if(lastRelevantFollowUp) {
+        stateAtDate.status = lastRelevantFollowUp[3] || stateAtDate.status;
+        stateAtDate.notes = lastRelevantFollowUp[4] || stateAtDate.notes;
+    }
+
+    if (activeStatuses.includes(stateAtDate.status)) {
+      rowsToAdd.push([
+        dateToProcess,
+        lead.LeadID,
+        lead.AssignedTo,
+        lead.Name,
+        lead.Source,
+        lead.Phone,
+        stateAtDate.notes,
+        stateAtDate.status,
+        lead.DealValue, // Assume DealValue is constant, could be improved
+        stateAtDate.lastContact
+      ]);
+    }
+  }
+
+  if (rowsToAdd.length > 0) {
+    summarySheet.getRange(summarySheet.getLastRow() + 1, 1, rowsToAdd.length, rowsToAdd[0].length).setValues(rowsToAdd);
+    Logger.log(`Logged ${rowsToAdd.length} leads to MonthlyLeadSummary for ${dateToProcess.toLocaleDateString()}.`);
+  }
+}
+
+/**
+ * Generates a log of daily events (leads created, status changes) and updates the DailyDashboardStats sheet.
+ */
+function updateDailyDashboardStatsForDate(dateToProcess, allLeadsData, allFollowUpsData) {
+    const statsSheet = getSheet('dailyDashboardStats');
+    const dayStart = new Date(dateToProcess);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dateToProcess);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    // --- Make function idempotent: Delete today's existing records ---
+    const data = statsSheet.getDataRange().getValues();
+    for (let i = data.length - 1; i >= 1; i--) {
+        const recordDate = new Date(data[i][0]);
+        recordDate.setHours(0, 0, 0, 0);
+        if (recordDate.getTime() === dateToProcess.getTime()) {
+            statsSheet.deleteRow(i + 1);
+        }
+    }
+
+    // --- Daily Event-Based Logic ---
+    const dailyEvents = {
+        LeadsCreated_Count: 0, LeadsCreated_Value: 0,
+        BecameInProgress_Count: 0, BecameInProgress_Value: 0,
+        BecameProspecting_Count: 0, BecameProspecting_Value: 0,
+        BecameConvincing_Count: 0, BecameConvincing_Value: 0,
+        BecameNegotiating_Count: 0, BecameNegotiating_Value: 0,
+        BecameWon_Count: 0, BecameWon_Value: 0,
+        BecameLost_Count: 0, BecameLost_Value: 0,
+        LeadsContacted_Count: 0
+    };
+
+    const leadsMap = allLeadsData.reduce((map, lead) => {
+        map[lead.LeadID] = lead;
+        return map;
+    }, {});
+
+    // 1. Count leads created on this day
+    const leadsCreatedOnDate = allLeadsData.filter(lead => {
+        const createdAt = new Date(lead.CreatedAt);
+        return createdAt >= dayStart && createdAt <= dayEnd;
+    });
+
+    dailyEvents.LeadsCreated_Count = leadsCreatedOnDate.length;
+    dailyEvents.LeadsCreated_Value = leadsCreatedOnDate.reduce((sum, lead) => sum + (parseFloat(lead.DealValue) || 0), 0);
+
+    // 2. Count status changes on this day
+    const followUpsOnDate = allFollowUpsData
+        .slice(1)
+        .filter(fu => {
+            const fuDate = new Date(fu[1]);
+            return fuDate >= dayStart && fuDate <= dayEnd && fu[3]; // Ensure it has a status change
+        });
+
+    const contactedLeads = new Set();
+    for (const fu of followUpsOnDate) {
+        const leadId = fu[0];
+        contactedLeads.add(leadId); // Add to set for unique count
+
+        const newStatus = fu[3];
+        const lead = leadsMap[leadId];
+        if (!lead) continue;
+
+        const dealValue = parseFloat(lead.DealValue) || 0;
+        const statusKey = newStatus.replace(/\s+/g, ''); // e.g., "In Progress" -> "InProgress"
+
+        const countKey = `Became${statusKey}_Count`;
+        const valueKey = `Became${statusKey}_Value`;
+
+        if (dailyEvents.hasOwnProperty(countKey)) {
+            dailyEvents[countKey]++;
+            dailyEvents[valueKey] += dealValue;
+        }
+    }
+    dailyEvents.LeadsContacted_Count = contactedLeads.size;
+
+    const newRow = [
+        dateToProcess,
+        dailyEvents.LeadsCreated_Count, dailyEvents.LeadsCreated_Value,
+        dailyEvents.BecameInProgress_Count, dailyEvents.BecameInProgress_Value,
+        dailyEvents.BecameProspecting_Count, dailyEvents.BecameProspecting_Value,
+        dailyEvents.BecameConvincing_Count, dailyEvents.BecameConvincing_Value,
+        dailyEvents.BecameNegotiating_Count, dailyEvents.BecameNegotiating_Value,
+        dailyEvents.BecameWon_Count, dailyEvents.BecameWon_Value,
+        dailyEvents.BecameLost_Count, dailyEvents.BecameLost_Value,
+        dailyEvents.LeadsContacted_Count
+    ];
+
+    statsSheet.appendRow(newRow);
+    Logger.log(`Logged daily events to DailyDashboardStats for ${dateToProcess.toLocaleDateString()}.`);
+}
+
+/**
+ * Generates a comprehensive, event-based summary of team performance
+ * and updates the TeamPerformanceDashboard sheet.
+ */
+function updateTeamPerformanceDashboard() {
+    const ui = SpreadsheetApp.getUi();
+    ui.showSidebar(HtmlService.createHtmlOutput('<p>Generating Team Performance Dashboard... This may take a moment.</p>').setTitle('Update in Progress'));
+
+    try {
+        const allLeads = getLeads();
+        if (allLeads.length === 0) {
+            ui.alert('No leads found to generate a report.');
+            return;
+        }
+
+        const allFollowUps = getSheet('followups').getDataRange().getValues().slice(1);
+        const performanceData = {};
+
+        // Helper to initialize a month-member object
+        const initPerfData = (key, month, member) => {
+            if (!performanceData[key]) {
+                performanceData[key] = {
+                    month: month, teamMember: member,
+                    NewLeads_Count: 0, NewLeads_Value: 0, InProgress_Count: 0, InProgress_Value: 0,
+                    Prospecting_Count: 0, Prospecting_Value: 0, Convincing_Count: 0, Convincing_Value: 0,
+                    Negotiating_Count: 0, Negotiating_Value: 0, Won_Count: 0, Won_Value: 0,
+                    Lost_Count: 0, Lost_Value: 0,
+                };
+            }
+        };
+
+        // 1. Process Lead Creation Events
+        for (const lead of allLeads) {
+            const createdAt = new Date(lead.CreatedAt);
+            const monthStr = `${createdAt.getFullYear()}-${String(createdAt.getMonth() + 1).padStart(2, '0')}`;
+            const assignee = lead.AssignedTo || 'Unassigned';
+            const key = `${monthStr}-${assignee}`;
+
+            initPerfData(key, monthStr, assignee);
+
+            performanceData[key].NewLeads_Count++;
+            performanceData[key].NewLeads_Value += parseFloat(lead.DealValue) || 0;
+        }
+
+        // 2. Process Status Change Events from Follow-ups
+        const leadsMap = allLeads.reduce((map, lead) => {
+            map[lead.LeadID] = lead;
+            return map;
+        }, {});
+
+        for (const fu of allFollowUps) {
+            const leadId = fu[0];
+            const status = fu[3];
+            if (!status) continue;
+
+            const lead = leadsMap[leadId];
+            if (!lead) continue;
+
+            const eventDate = new Date(fu[1]);
+            const monthStr = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}`;
+            const assignee = lead.AssignedTo || 'Unassigned';
+            const key = `${monthStr}-${assignee}`;
+
+            initPerfData(key, monthStr, assignee);
+
+            const dealValue = parseFloat(lead.DealValue) || 0;
+            const statusKey = status.replace(/\s+/g, '');
+            const countKey = `${statusKey}_Count`;
+            const valueKey = `${statusKey}_Value`;
+
+            if (performanceData[key].hasOwnProperty(countKey)) {
+                performanceData[key][countKey]++;
+                performanceData[key][valueKey] += dealValue;
+            }
+        }
+
+        const sheet = getSheet('teamPerformanceDashboard');
+        if (sheet.getLastRow() > 1) {
+            sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).clearContent();
+        }
+
+        const rows = Object.values(performanceData).map(d => [
+            d.month, d.teamMember,
+            d.NewLeads_Count, d.NewLeads_Value, d.InProgress_Count, d.InProgress_Value,
+            d.Prospecting_Count, d.Prospecting_Value, d.Convincing_Count, d.Convincing_Value,
+            d.Negotiating_Count, d.Negotiating_Value, d.Won_Count, d.Won_Value,
+            d.Lost_Count, d.Lost_Value
+        ]);
+
+        if (rows.length > 0) {
+            rows.sort((a, b) => b[0].localeCompare(a[0]) || a[1].localeCompare(b[1]));
+            sheet.getRange(2, 1, rows.length, rows[0].length).setValues(rows);
+        }
+
+        ui.alert('Team Performance Dashboard has been successfully updated!');
+        Logger.log('Successfully updated the Team Performance Dashboard.');
+
+    } catch (e) {
+        Logger.log(`Error updating Team Performance Dashboard: ${e.toString()}`);
+        ui.alert(`An error occurred while updating the dashboard: ${e.message}`);
+    }
 }
