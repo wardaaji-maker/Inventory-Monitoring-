@@ -1117,8 +1117,11 @@
                   <button class="btn btn-success" style="padding: 6px 12px; font-size: 12px; margin-bottom: 5px;" onclick='openPaymentModal("${debt.id}", ${escapeAttribute(debt.debtName)}, ${debt.principalBalance})'>
                     <i class="fas fa-money-bill-wave"></i> Pay
                   </button>
-                  <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick='openEditModal(${escapeAttribute(debt)})'>
+                  <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; margin-bottom: 5px;" onclick='openEditModal(${escapeAttribute(debt)})'>
                     <i class="fas fa-edit"></i> Edit
+                  </button>
+                  <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick='confirmDelete("debt", "${debt.id}")'>
+                    <i class="fas fa-trash"></i> Delete
                   </button>
                 </td>
               </tr>
@@ -1149,6 +1152,7 @@
                   <th>Debt Name</th>
                   <th>Amount Paid</th>
                   <th>Proof</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -1162,6 +1166,11 @@
                 <td><strong>${escapeHtml(payment.debtName) || '-'}</strong></td>
                 <td style="color: #10B981; font-weight: bold;">+${formatMoney(payment.amount)}</td>
                 <td>${proofLink}</td>
+                <td>
+                  <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick='confirmDelete("payment", "${payment.paymentId}")'>
+                    <i class="fas fa-trash"></i> Delete
+                  </button>
+                </td>
               </tr>
             `;
           });
@@ -1237,11 +1246,6 @@
               <div class="stat-value" style="color: ${summary.netBalance >= 0 ? '#10B981' : '#EF4444'};">${formatMoney(summary.netBalance)}</div>
               <div class="stat-label">Net Balance (Monthly)</div>
             </div>
-            <div class="stat-card calculator-card">
-              <div class="stat-icon">🚀</div>
-              <div class="stat-value">${formatMoney(summary.dailyCapability)}</div>
-              <div class="stat-label">Daily Debt Repayment Capability</div>
-            </div>
             <div class="stat-card" style="background: ${summary.unallocatedBalance < 0 ? '#FEE2E2' : '#FFFFFF'}; border: ${summary.unallocatedBalance < 0 ? '2px solid #EF4444' : 'none'};">
               <div class="stat-icon">${summary.unallocatedBalance < 0 ? '⚠️' : '🎯'}</div>
               <div class="stat-value" style="color: ${summary.unallocatedBalance < 0 ? '#EF4444' : '#10B981'};">${formatMoney(summary.unallocatedBalance)}</div>
@@ -1304,6 +1308,7 @@
                   <th style="text-align: left; padding: 15px; border-bottom: 2px solid #E5E7EB;">Category</th>
                   <th style="text-align: left; padding: 15px; border-bottom: 2px solid #E5E7EB;">Amount</th>
                   <th style="text-align: left; padding: 15px; border-bottom: 2px solid #E5E7EB;">Note</th>
+                  <th style="text-align: left; padding: 15px; border-bottom: 2px solid #E5E7EB;">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -1320,6 +1325,11 @@
                 <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${escapeHtml(r.category)}</td>
                 <td class="${typeClass}" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${sign}${formatMoney(r.amount)}</td>
                 <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${escapeHtml(r.note)}</td>
+                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">
+                  <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick='confirmDelete("finance", "${r.id}")'>
+                    <i class="fas fa-trash"></i> Delete
+                  </button>
+                </td>
               </tr>
             `;
           });
@@ -1424,6 +1434,7 @@
                   <th style="text-align: left; padding: 15px; border-bottom: 2px solid #E5E7EB;">Allocated</th>
                   <th style="text-align: left; padding: 15px; border-bottom: 2px solid #E5E7EB;">Spent</th>
                   <th style="text-align: left; padding: 15px; border-bottom: 2px solid #E5E7EB;">Remaining</th>
+                  <th style="text-align: left; padding: 15px; border-bottom: 2px solid #E5E7EB;">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -1438,6 +1449,11 @@
                 <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatMoney(b.allocated)}</td>
                 <td style="color: #EF4444; padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatMoney(b.spent)}</td>
                 <td style="color: ${color}; font-weight: bold; padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatMoney(b.remaining)}</td>
+                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">
+                  <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick='confirmDelete("budget", "${b.id}")'>
+                    <i class="fas fa-trash"></i> Delete
+                  </button>
+                </td>
               </tr>
             `;
           });
@@ -1489,6 +1505,32 @@
           showMessage('Error: ' + err.message, 'error');
         })
         .saveFinanceRecord(data);
+    }
+
+    function confirmDelete(type, id) {
+      if (!confirm('Are you sure you want to delete this record? This action cannot be undone.')) return;
+
+      var funcName;
+      if (type === 'debt') funcName = 'deleteDebt';
+      else if (type === 'payment') funcName = 'deletePayment';
+      else if (type === 'budget') funcName = 'deleteBudget';
+      else if (type === 'finance') funcName = 'deleteFinanceRecord';
+
+      if (funcName) {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (res.success) {
+              showMessage(res.message, 'success');
+              if (type === 'debt' || type === 'payment') refreshData();
+              if (type === 'budget' || type === 'finance') refreshFinanceData();
+            } else {
+              showMessage(res.message, 'error');
+            }
+          })
+          .withFailureHandler(function(err) {
+            showMessage('Error: ' + err.message, 'error');
+          })[funcName](id);
+      }
     }
 
     // Initial load

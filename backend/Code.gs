@@ -734,27 +734,24 @@ function getFinanceSummary() {
       'Saving Budget': { allocated: 0, spent: 0 }
     };
 
-    var totalAllocatedBudget = 0;
+    var totalRemainingBudget = 0;
     budgets.forEach(function(b) {
       if (budgetSummary[b.budgetCategory]) {
         budgetSummary[b.budgetCategory].allocated += b.allocated;
         budgetSummary[b.budgetCategory].spent += b.spent;
-        totalAllocatedBudget += b.allocated;
+        totalRemainingBudget += b.remaining;
       }
     });
 
     var netBalance = totalIncome - totalOutcome;
-    var dailyCapability = netBalance > 0 ? (netBalance / 30) : 0;
-    var unallocatedBalance = netBalance - totalAllocatedBudget;
+    var unallocatedBalance = netBalance - totalRemainingBudget;
 
     var result = {
       totalIncome: totalIncome,
       totalOutcome: totalOutcome,
       netBalance: netBalance,
-      monthlyCapability: netBalance > 0 ? netBalance : 0,
-      dailyCapability: dailyCapability,
       budgetSummary: budgetSummary,
-      totalAllocatedBudget: totalAllocatedBudget,
+      totalRemainingBudget: totalRemainingBudget,
       unallocatedBalance: unallocatedBalance
     };
 
@@ -765,11 +762,47 @@ function getFinanceSummary() {
       totalIncome: 0,
       totalOutcome: 0,
       netBalance: 0,
-      monthlyCapability: 0,
-      dailyCapability: 0,
       budgetSummary: {},
-      totalAllocatedBudget: 0,
+      totalRemainingBudget: 0,
       unallocatedBalance: 0
     };
   }
+}
+
+function deleteRowById(sheetName, idColIndex, idValue) {
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName(sheetName);
+    if (!sheet) return { success: false, message: 'Sheet not found.' };
+
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][idColIndex] === idValue) {
+        sheet.deleteRow(i + 1);
+        return { success: true, message: 'Successfully deleted record.' };
+      }
+    }
+    return { success: false, message: 'Record not found.' };
+  } catch (error) {
+    return { success: false, message: 'Error deleting record: ' + error.toString() };
+  }
+}
+
+function deleteDebt(id) {
+  // Also delete associated payments to maintain integrity, or just let them be orphaned?
+  // Let's just delete the debt for now as requested.
+  return deleteRowById('Debts_Data', 0, id);
+}
+
+function deletePayment(id) {
+  // Option: re-add amount to debt principal? The request only asked to remove it.
+  return deleteRowById('Payments_Data', 0, id);
+}
+
+function deleteBudget(id) {
+  return deleteRowById('Budgets_Data', 0, id);
+}
+
+function deleteFinanceRecord(id) {
+  return deleteRowById('Finance_Data', 0, id);
 }
