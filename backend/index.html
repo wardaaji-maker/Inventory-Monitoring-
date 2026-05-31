@@ -34,6 +34,38 @@
       margin-bottom: 30px;
       box-shadow: 0 10px 40px rgba(0,0,0,0.1);
       text-align: center;
+      position: relative;
+    }
+
+    .nav-btn {
+      position: absolute;
+      top: 30px;
+      right: 30px;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s;
+      cursor: pointer;
+      border: none;
+    }
+    .nav-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+    }
+
+    @media (max-width: 768px) {
+      .nav-btn {
+        position: static;
+        margin-top: 20px;
+        display: inline-flex;
+      }
     }
 
     .logo {
@@ -355,6 +387,7 @@
       <div class="logo">💰</div>
       <h1>Debt Manager Pro</h1>
       <p class="subtitle">Smart Debt Repayment System | Avalanche Method | OJK Compliant</p>
+      <button class="nav-btn" onclick="goToFinance()"><i class="fas fa-chart-line"></i> Finance Tracker</button>
     </div>
 
     <div id="statsContainer" class="stats-grid">
@@ -905,7 +938,7 @@
                   <button class="btn btn-success" style="padding: 6px 12px; font-size: 12px; margin-bottom: 5px;" onclick="openPaymentModal('${debt.id}', '${escapeJsString(debt.debtName)}', ${debt.principalBalance})">
                     <i class="fas fa-money-bill-wave"></i> Pay
                   </button>
-                  <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick='openEditModal(${JSON.stringify(debt).replace(/'/g, "&#39;")})'>
+                  <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px;" onclick='openEditModal(${escapeAttribute(debt)})'>
                     <i class="fas fa-edit"></i> Edit
                   </button>
                 </td>
@@ -993,9 +1026,19 @@
 
     function escapeJsString(text) {
       if (!text) return '';
-      return text.replace(/\\/g, '\\\\')
+      return String(text).replace(/\\/g, '\\\\')
                  .replace(/'/g, "\\'")
                  .replace(/"/g, '\\"');
+    }
+
+    function escapeAttribute(obj) {
+      return escapeHtml(JSON.stringify(obj)).replace(/'/g, "&#39;");
+    }
+
+    function goToFinance() {
+      google.script.run.withSuccessHandler(function(url) {
+        window.top.location.href = url + '?page=finance';
+      }).getScriptUrl();
     }
 
     // Initial load

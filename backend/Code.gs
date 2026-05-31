@@ -7,12 +7,41 @@
 var SHEET_ID = '1zw6V_uzHEcyLKgLpGgoxDqook0UP8Kp4QuiJyjf_SEg';
 var sheet;
 
-function doGet() {
+function doGet(e) {
+  if (e && e.parameter && e.parameter.page === 'finance') {
+    return HtmlService.createHtmlOutputFromFile('finance')
+      .setTitle('Daily Finance Tracker')
+      .setWidth(1400)
+      .setHeight(900)
+      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+  }
+
   return HtmlService.createHtmlOutputFromFile('index')
     .setTitle('Debt Manager Pro - Smart Debt Repayment System')
     .setWidth(1400)
     .setHeight(900)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+function getScriptUrl() {
+  return ScriptApp.getService().getUrl();
+}
+
+function sanitizeData(data) {
+  if (Array.isArray(data)) {
+    return data.map(function(item) {
+      return sanitizeData(item);
+    });
+  } else if (data instanceof Date) {
+    return data.toISOString();
+  } else if (data !== null && typeof data === 'object') {
+    var sanitizedObj = {};
+    for (var key in data) {
+      sanitizedObj[key] = sanitizeData(data[key]);
+    }
+    return sanitizedObj;
+  }
+  return data;
 }
 
 function onOpen() {
@@ -231,13 +260,13 @@ function getAllDebts() {
         debts.push({
           id: data[i][0],
           row: i + 2,
-          timestamp: (data[i][1] instanceof Date) ? data[i][1].toISOString() : data[i][1],
+          timestamp: data[i][1],
           debtName: data[i][2],
           debtType: data[i][3],
           principalBalance: data[i][4],
           interestRate: data[i][5],
           interestType: data[i][6],
-          dueDate: (data[i][7] instanceof Date) ? data[i][7].toISOString() : data[i][7],
+          dueDate: data[i][7],
           ojkStatus: data[i][8],
           dailyInterest: data[i][9],
           priorityScore: data[i][10],
@@ -248,8 +277,9 @@ function getAllDebts() {
       }
     }
 
-    return debts;
+    return sanitizeData(debts);
   } catch (error) {
+    console.error('Error in getAllDebts: ' + error.toString());
     return [];
   }
 }
@@ -487,8 +517,9 @@ function getAllPayments() {
       return new Date(b.timestamp) - new Date(a.timestamp);
     });
 
-    return payments;
+    return sanitizeData(payments);
   } catch (error) {
+    console.error('Error in getAllPayments: ' + error.toString());
     return [];
   }
 }
@@ -578,8 +609,9 @@ function getFinanceRecords() {
       return new Date(b.timestamp) - new Date(a.timestamp);
     });
 
-    return records;
+    return sanitizeData(records);
   } catch (error) {
+    console.error('Error in getFinanceRecords: ' + error.toString());
     return [];
   }
 }
