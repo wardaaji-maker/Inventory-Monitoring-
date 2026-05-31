@@ -1242,6 +1242,13 @@
               <div class="stat-value">${formatMoney(summary.dailyCapability)}</div>
               <div class="stat-label">Daily Debt Repayment Capability</div>
             </div>
+            <div class="stat-card" style="background: ${summary.unallocatedBalance < 0 ? '#FEE2E2' : '#FFFFFF'}; border: ${summary.unallocatedBalance < 0 ? '2px solid #EF4444' : 'none'};">
+              <div class="stat-icon">${summary.unallocatedBalance < 0 ? '⚠️' : '🎯'}</div>
+              <div class="stat-value" style="color: ${summary.unallocatedBalance < 0 ? '#EF4444' : '#10B981'};">${formatMoney(summary.unallocatedBalance)}</div>
+              <div class="stat-label" style="color: ${summary.unallocatedBalance < 0 ? '#EF4444' : '#666'};">
+                ${summary.unallocatedBalance < 0 ? 'Warning: Budgets Exceed Net Balance' : 'Unallocated Balance'}
+              </div>
+            </div>
           `;
 
           // Append budget summary Breakdown

@@ -465,12 +465,25 @@ function makePayment(debtId, amount, base64Proof, filename) {
         var proofUrl = '';
         if (base64Proof && filename) {
           try {
-            var contentType = base64Proof.substring(5, base64Proof.indexOf(';'));
-            var bytes = Utilities.base64Decode(base64Proof.substr(base64Proof.indexOf('base64,') + 7));
-            var blob = Utilities.newBlob(bytes, contentType, filename);
-            var folder = DriveApp.getRootFolder();
-            var file = folder.createFile(blob);
-            proofUrl = file.getUrl();
+            var commaIndex = base64Proof.indexOf('base64,');
+            if (commaIndex !== -1) {
+              var contentType = base64Proof.substring(5, base64Proof.indexOf(';'));
+              var base64Data = base64Proof.substring(commaIndex + 7);
+              var bytes = Utilities.base64Decode(base64Data);
+              var blob = Utilities.newBlob(bytes, contentType, filename);
+
+              var folders = DriveApp.getFoldersByName('DebtManager_Proofs');
+              var folder;
+              if (folders.hasNext()) {
+                folder = folders.next();
+              } else {
+                folder = DriveApp.createFolder('DebtManager_Proofs');
+              }
+
+              var file = folder.createFile(blob);
+              file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+              proofUrl = file.getUrl();
+            }
           } catch(e) {
             console.error('File upload error: ' + e);
           }
@@ -721,15 +734,18 @@ function getFinanceSummary() {
       'Saving Budget': { allocated: 0, spent: 0 }
     };
 
+    var totalAllocatedBudget = 0;
     budgets.forEach(function(b) {
       if (budgetSummary[b.budgetCategory]) {
         budgetSummary[b.budgetCategory].allocated += b.allocated;
         budgetSummary[b.budgetCategory].spent += b.spent;
+        totalAllocatedBudget += b.allocated;
       }
     });
 
     var netBalance = totalIncome - totalOutcome;
     var dailyCapability = netBalance > 0 ? (netBalance / 30) : 0;
+    var unallocatedBalance = netBalance - totalAllocatedBudget;
 
     var result = {
       totalIncome: totalIncome,
@@ -737,7 +753,9 @@ function getFinanceSummary() {
       netBalance: netBalance,
       monthlyCapability: netBalance > 0 ? netBalance : 0,
       dailyCapability: dailyCapability,
-      budgetSummary: budgetSummary
+      budgetSummary: budgetSummary,
+      totalAllocatedBudget: totalAllocatedBudget,
+      unallocatedBalance: unallocatedBalance
     };
 
     return sanitizeData(result);
@@ -749,7 +767,9 @@ function getFinanceSummary() {
       netBalance: 0,
       monthlyCapability: 0,
       dailyCapability: 0,
-      budgetSummary: {}
+      budgetSummary: {},
+      totalAllocatedBudget: 0,
+      unallocatedBalance: 0
     };
   }
 }
