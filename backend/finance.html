@@ -248,6 +248,11 @@
       <div class="logo">💸</div>
       <h1>Daily Finance Tracker</h1>
       <p style="color: #666;">Track your income and expenses to discover your true debt repayment capability.</p>
+
+      <div style="margin-top: 20px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+        <button class="btn btn-primary" onclick="openAddBudgetModal()"><i class="fas fa-plus"></i> Add Budget</button>
+        <button class="btn" style="background: #4F46E5; color: white;" onclick="openViewBudgetsModal()"><i class="fas fa-list"></i> View Budgets</button>
+      </div>
     </div>
 
     <div id="message" class="message"></div>
@@ -266,15 +271,18 @@
       <div class="form-grid">
         <div class="input-group">
           <label>Type</label>
-          <select id="finType">
+          <select id="finType" onchange="toggleCategoryInput()">
             <option value="Income">Income (+)</option>
             <option value="Outcome">Outcome (-)</option>
           </select>
         </div>
 
-        <div class="input-group">
+        <div class="input-group" id="categoryInputGroup">
           <label>Category</label>
-          <input type="text" id="finCategory" placeholder="e.g., Salary, Food, Rent, Entertainment">
+          <input type="text" id="finCategoryText" placeholder="e.g., Salary, Bonus, Investment">
+          <select id="finCategorySelect" style="display: none;">
+            <option value="" disabled selected>Select Budget...</option>
+          </select>
         </div>
 
         <div class="input-group">
@@ -302,6 +310,52 @@
       </div>
       <div id="recordsContainer">
         <div style="text-align: center; padding: 20px;">Loading transactions...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Budget Modal -->
+  <div id="addBudgetModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;">
+    <div style="background: white; border-radius: 20px; padding: 30px; max-width: 500px; width: 90%;">
+      <h3 style="margin-bottom: 20px;"><i class="fas fa-bullseye"></i> Add Budget Allocation</h3>
+      <div class="form-grid" style="text-align: left;">
+        <div class="input-group" style="grid-column: 1 / -1;">
+          <label>Budget Name (e.g., KPR, Groceries, Emergency)</label>
+          <input type="text" id="budgetName" placeholder="Enter budget name">
+        </div>
+        <div class="input-group" style="grid-column: 1 / -1;">
+          <label>Budget Category</label>
+          <select id="budgetCategory">
+            <option value="Fixed Budget">Fixed Budget (KPR, Rent, Insurance)</option>
+            <option value="Variable Budget">Variable Budget (Food, Utilities)</option>
+            <option value="Periodic Budget">Periodic Budget (Taxes, Holiday)</option>
+            <option value="Saving Budget">Saving Budget (Emergency, Investment)</option>
+          </select>
+        </div>
+        <div class="input-group" style="grid-column: 1 / -1;">
+          <label>Allocated Amount</label>
+          <input type="number" id="budgetAmount" min="1" step="any" placeholder="Enter amount">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+        <button class="btn btn-primary" onclick="saveBudget()" id="saveBudgetBtn">Save Budget</button>
+        <button class="btn" style="background: #6B7280; color: white;" onclick="closeAddBudgetModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Budgets Modal -->
+  <div id="viewBudgetsModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000;">
+    <div style="background: white; border-radius: 20px; padding: 30px; max-width: 800px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3><i class="fas fa-list-alt"></i> All Budgets</h3>
+        <button style="background: none; border: none; font-size: 1.5em; cursor: pointer; color: #666;" onclick="closeViewBudgetsModal()">&times;</button>
+      </div>
+      <div id="budgetsListContainer" style="overflow-y: auto; flex-grow: 1;">
+        <div style="text-align: center; padding: 20px;">Loading budgets...</div>
+      </div>
+      <div style="display: flex; justify-content: center; margin-top: 20px;">
+        <button class="btn" style="background: #6B7280; color: white;" onclick="closeViewBudgetsModal()">Close</button>
       </div>
     </div>
   </div>
@@ -367,6 +421,43 @@
               <div class="stat-label">Daily Debt Repayment Capability</div>
             </div>
           `;
+
+          // Append budget summary Breakdown
+          var budgetHtml = `
+            <div class="section-title" style="color: white; margin-top: 30px;"><i class="fas fa-layer-group"></i> Budget Allocation Summary</div>
+            <div class="stats-grid">
+          `;
+
+          ['Fixed Budget', 'Variable Budget', 'Periodic Budget', 'Saving Budget'].forEach(function(cat) {
+            var data = summary.budgetSummary[cat] || { allocated: 0, spent: 0 };
+            var remaining = data.allocated - data.spent;
+            var color = remaining < 0 ? '#EF4444' : (remaining > 0 ? '#10B981' : '#666');
+
+            budgetHtml += `
+              <div class="stat-card">
+                <div class="stat-label" style="font-weight: bold; margin-bottom: 10px;">${cat}</div>
+                <div style="font-size: 0.9em; display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <span>Allocated:</span> <strong>${formatMoney(data.allocated)}</strong>
+                </div>
+                <div style="font-size: 0.9em; display: flex; justify-content: space-between; margin-bottom: 5px;">
+                  <span>Spent:</span> <strong style="color: #EF4444;">${formatMoney(data.spent)}</strong>
+                </div>
+                <div style="font-size: 0.9em; display: flex; justify-content: space-between; margin-top: 10px; border-top: 1px solid #eee; padding-top: 5px;">
+                  <span>Remaining:</span> <strong style="color: ${color};">${formatMoney(remaining)}</strong>
+                </div>
+              </div>
+            `;
+          });
+
+          budgetHtml += '</div>';
+
+          if (!document.getElementById('budgetSummaryContainer')) {
+             var div = document.createElement('div');
+             div.id = 'budgetSummaryContainer';
+             container.parentNode.insertBefore(div, container.nextSibling);
+          }
+          document.getElementById('budgetSummaryContainer').innerHTML = budgetHtml;
+
         })
         .getFinanceSummary();
     }
@@ -419,12 +510,135 @@
     function refreshAll() {
       loadDashboard();
       loadRecords();
+      loadBudgets();
+    }
+
+    function toggleCategoryInput() {
+      var type = document.getElementById('finType').value;
+      if (type === 'Income') {
+        document.getElementById('finCategoryText').style.display = 'block';
+        document.getElementById('finCategorySelect').style.display = 'none';
+      } else {
+        document.getElementById('finCategoryText').style.display = 'none';
+        document.getElementById('finCategorySelect').style.display = 'block';
+      }
+    }
+
+    function openAddBudgetModal() {
+      document.getElementById('addBudgetModal').style.display = 'flex';
+    }
+
+    function closeAddBudgetModal() {
+      document.getElementById('addBudgetModal').style.display = 'none';
+      document.getElementById('budgetName').value = '';
+      document.getElementById('budgetAmount').value = '';
+    }
+
+    function saveBudget() {
+      var data = {
+        budgetName: document.getElementById('budgetName').value,
+        budgetCategory: document.getElementById('budgetCategory').value,
+        amount: document.getElementById('budgetAmount').value
+      };
+
+      if (!data.budgetName || !data.amount || parseFloat(data.amount) <= 0) {
+        showMessage('Please enter a valid budget name and amount.', 'error');
+        return;
+      }
+
+      var btn = document.getElementById('saveBudgetBtn');
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.innerText = 'Save Budget';
+          if (res.success) {
+            closeAddBudgetModal();
+            showMessage(res.message, 'success');
+            refreshAll();
+          } else {
+            showMessage(res.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerText = 'Save Budget';
+          showMessage('Error: ' + err.message, 'error');
+        })
+        .saveBudget(data);
+    }
+
+    function openViewBudgetsModal() {
+      document.getElementById('viewBudgetsModal').style.display = 'flex';
+      // loadBudgets logic is handled inside refreshAll/loadBudgets automatically, but we ensure it's rendered.
+    }
+
+    function closeViewBudgetsModal() {
+      document.getElementById('viewBudgetsModal').style.display = 'none';
+    }
+
+    function loadBudgets() {
+      google.script.run
+        .withSuccessHandler(function(budgets) {
+          // 1. Populate Dropdown for Outcome
+          var select = document.getElementById('finCategorySelect');
+          select.innerHTML = '<option value="" disabled selected>Select Budget...</option>';
+          budgets.forEach(function(b) {
+            var opt = document.createElement('option');
+            opt.value = b.budgetName;
+            opt.text = b.budgetName + ' (' + b.budgetCategory + ')';
+            select.appendChild(opt);
+          });
+
+          // 2. Populate View Budgets Modal
+          var container = document.getElementById('budgetsListContainer');
+          if (budgets.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 20px;">No budgets allocated yet.</div>';
+            return;
+          }
+
+          var html = `
+            <table>
+              <thead>
+                <tr>
+                  <th>Budget Name</th>
+                  <th>Category</th>
+                  <th>Allocated</th>
+                  <th>Spent</th>
+                  <th>Remaining</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          budgets.forEach(function(b) {
+            var color = b.remaining < 0 ? '#EF4444' : (b.remaining > 0 ? '#10B981' : '#666');
+            html += `
+              <tr>
+                <td><strong>${escapeHtml(b.budgetName)}</strong></td>
+                <td>${escapeHtml(b.budgetCategory)}</td>
+                <td>${formatMoney(b.allocated)}</td>
+                <td style="color: #EF4444;">${formatMoney(b.spent)}</td>
+                <td style="color: ${color}; font-weight: bold;">${formatMoney(b.remaining)}</td>
+              </tr>
+            `;
+          });
+
+          html += '</tbody></table>';
+          container.innerHTML = html;
+        })
+        .getBudgets();
     }
 
     function saveTransaction() {
+      var type = document.getElementById('finType').value;
+      var category = type === 'Income' ? document.getElementById('finCategoryText').value : document.getElementById('finCategorySelect').value;
+
       var data = {
-        type: document.getElementById('finType').value,
-        category: document.getElementById('finCategory').value,
+        type: type,
+        category: category,
         amount: document.getElementById('finAmount').value,
         note: document.getElementById('finNote').value
       };

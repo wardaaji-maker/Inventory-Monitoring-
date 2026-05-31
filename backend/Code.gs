@@ -176,6 +176,24 @@ function getOrCreateSheet() {
       financeSheet.setFrozenRows(1);
     }
 
+    var budgetSheet = ss.getSheetByName('Budgets_Data');
+    if (!budgetSheet) {
+      budgetSheet = ss.insertSheet('Budgets_Data');
+      var budgetHeaders = [
+        ['ID', 'Timestamp', 'Budget Name', 'Budget Category', 'Amount']
+      ];
+      budgetSheet.getRange(1, 1, 1, budgetHeaders[0].length).setValues(budgetHeaders);
+
+      var bHeaderRange = budgetSheet.getRange(1, 1, 1, budgetHeaders[0].length);
+      bHeaderRange.setFontWeight('bold');
+      bHeaderRange.setBackground('#F59E0B');
+      bHeaderRange.setFontColor('#FFFFFF');
+      bHeaderRange.setHorizontalAlignment('center');
+
+      budgetSheet.setColumnWidths(1, 5, [150, 150, 200, 150, 150]);
+      budgetSheet.setFrozenRows(1);
+    }
+
     return sheet;
   } catch (error) {
     console.error('Error accessing sheet:', error);
@@ -616,9 +634,80 @@ function getFinanceRecords() {
   }
 }
 
+function saveBudget(data) {
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var budgetSheet = ss.getSheetByName('Budgets_Data');
+    if (!budgetSheet) {
+      getOrCreateSheet();
+      budgetSheet = ss.getSheetByName('Budgets_Data');
+    }
+
+    var timestamp = new Date();
+    var recordId = 'BUDGET_' + timestamp.getTime();
+
+    var row = [
+      recordId,
+      timestamp,
+      data.budgetName,
+      data.budgetCategory,
+      parseFloat(data.amount)
+    ];
+
+    budgetSheet.appendRow(row);
+    return { success: true, message: 'Budget allocated successfully!' };
+  } catch(error) {
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+function getBudgets() {
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var budgetSheet = ss.getSheetByName('Budgets_Data');
+    if (!budgetSheet) return [];
+
+    var lastRow = budgetSheet.getLastRow();
+    if (lastRow <= 1) return [];
+
+    var data = budgetSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    var budgets = [];
+
+    // Get spent amounts
+    var financeRecords = getFinanceRecords();
+    var spentMap = {};
+    financeRecords.forEach(function(r) {
+      if (r.type === 'Outcome') {
+        spentMap[r.category] = (spentMap[r.category] || 0) + parseFloat(r.amount);
+      }
+    });
+
+    for (var i = 0; i < data.length; i++) {
+      var name = data[i][2];
+      var allocated = parseFloat(data[i][4]);
+      var spent = spentMap[name] || 0;
+      budgets.push({
+        id: data[i][0],
+        timestamp: data[i][1],
+        budgetName: name,
+        budgetCategory: data[i][3],
+        allocated: allocated,
+        spent: spent,
+        remaining: allocated - spent
+      });
+    }
+
+    return sanitizeData(budgets);
+  } catch (error) {
+    console.error('Error in getBudgets: ' + error.toString());
+    return [];
+  }
+}
+
 function getFinanceSummary() {
   try {
     var records = getFinanceRecords();
+    var budgets = getBudgets();
     var totalIncome = 0;
     var totalOutcome = 0;
 
@@ -630,24 +719,42 @@ function getFinanceSummary() {
       }
     });
 
-    var netBalance = totalIncome - totalOutcome;
+    var budgetSummary = {
+      'Fixed Budget': { allocated: 0, spent: 0 },
+      'Variable Budget': { allocated: 0, spent: 0 },
+      'Periodic Budget': { allocated: 0, spent: 0 },
+      'Saving Budget': { allocated: 0, spent: 0 }
+    };
 
+    budgets.forEach(function(b) {
+      if (budgetSummary[b.budgetCategory]) {
+        budgetSummary[b.budgetCategory].allocated += b.allocated;
+        budgetSummary[b.budgetCategory].spent += b.spent;
+      }
+    });
+
+    var netBalance = totalIncome - totalOutcome;
     var dailyCapability = netBalance > 0 ? (netBalance / 30) : 0;
 
-    return {
+    var result = {
       totalIncome: totalIncome,
       totalOutcome: totalOutcome,
       netBalance: netBalance,
       monthlyCapability: netBalance > 0 ? netBalance : 0,
-      dailyCapability: dailyCapability
+      dailyCapability: dailyCapability,
+      budgetSummary: budgetSummary
     };
+
+    return sanitizeData(result);
   } catch (error) {
+    console.error('Error in getFinanceSummary: ' + error.toString());
     return {
       totalIncome: 0,
       totalOutcome: 0,
       netBalance: 0,
       monthlyCapability: 0,
-      dailyCapability: 0
+      dailyCapability: 0,
+      budgetSummary: {}
     };
   }
 }
