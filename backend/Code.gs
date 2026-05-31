@@ -8,16 +8,8 @@ var SHEET_ID = '1zw6V_uzHEcyLKgLpGgoxDqook0UP8Kp4QuiJyjf_SEg';
 var sheet;
 
 function doGet(e) {
-  if (e && e.parameter && e.parameter.page === 'finance') {
-    return HtmlService.createHtmlOutputFromFile('finance')
-      .setTitle('Daily Finance Tracker')
-      .setWidth(1400)
-      .setHeight(900)
-      .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-  }
-
   return HtmlService.createHtmlOutputFromFile('index')
-    .setTitle('Debt Manager Pro - Smart Debt Repayment System')
+    .setTitle('Debt Manager Pro - Finance Tracker')
     .setWidth(1400)
     .setHeight(900)
     .addMetaTag('viewport', 'width=device-width, initial-scale=1');
@@ -50,7 +42,6 @@ function onOpen() {
     .addItem('🚀 Open Web App', 'showWebApp')
     .addItem('🎯 Generate Repayment Strategy', 'sortDebtsByPriority')
     .addItem('📊 View Dashboard', 'showDashboard')
-    .addItem('💸 Finance Tracker', 'showFinanceApp')
     .addToUi();
 }
 
@@ -70,13 +61,6 @@ function showDashboard() {
   SpreadsheetApp.getUi().showModalDialog(html, '📊 Financial Dashboard');
 }
 
-function showFinanceApp() {
-  var html = HtmlService.createHtmlOutputFromFile('finance')
-    .setTitle('Finance Tracker')
-    .setWidth(1400)
-    .setHeight(900);
-  SpreadsheetApp.getUi().showModalDialog(html, '💸 Daily Finance Tracker');
-}
 
 function getOrCreateSheet() {
   try {
@@ -156,6 +140,17 @@ function getOrCreateSheet() {
 
       paymentsSheet.setColumnWidths(1, 6, [150, 150, 150, 180, 150, 250]);
       paymentsSheet.setFrozenRows(1);
+    } else {
+      // Ensure the existing sheet has the Proof URL column header
+      var currentHeaders = paymentsSheet.getRange(1, 1, 1, paymentsSheet.getLastColumn() || 1).getValues()[0];
+      if (currentHeaders.length < 6 || currentHeaders[5] !== 'Proof URL') {
+        paymentsSheet.getRange(1, 6).setValue('Proof URL');
+        paymentsSheet.getRange(1, 6).setFontWeight('bold')
+                                    .setBackground('#10B981')
+                                    .setFontColor('#FFFFFF')
+                                    .setHorizontalAlignment('center');
+        paymentsSheet.setColumnWidth(6, 250);
+      }
     }
 
     var financeSheet = ss.getSheetByName('Finance_Data');
