@@ -21,6 +21,7 @@ function onOpen() {
     .addItem('🚀 Open Web App', 'showWebApp')
     .addItem('🎯 Generate Repayment Strategy', 'sortDebtsByPriority')
     .addItem('📊 View Dashboard', 'showDashboard')
+    .addItem('💸 Finance Tracker', 'showFinanceApp')
     .addToUi();
 }
 
@@ -40,6 +41,14 @@ function showDashboard() {
   SpreadsheetApp.getUi().showModalDialog(html, '📊 Financial Dashboard');
 }
 
+function showFinanceApp() {
+  var html = HtmlService.createHtmlOutputFromFile('finance')
+    .setTitle('Finance Tracker')
+    .setWidth(1400)
+    .setHeight(900);
+  SpreadsheetApp.getUi().showModalDialog(html, '💸 Daily Finance Tracker');
+}
+
 function getOrCreateSheet() {
   try {
     var ss = SpreadsheetApp.openById(SHEET_ID);
@@ -53,7 +62,7 @@ function getOrCreateSheet() {
       var headers = [
         ['ID', 'Timestamp', 'Debt Name', 'Debt Type', 'Principal Balance',
          'Interest Rate', 'Interest Type', 'Due Date', 'OJK Status',
-         'Daily Interest %', 'Priority Score', 'Repayment Priority', 'Status']
+         'Daily Interest %', 'Priority Score', 'Repayment Priority', 'Status', 'Note']
       ];
 
       sheet.getRange(1, 1, 1, headers[0].length).setValues(headers);
@@ -66,7 +75,7 @@ function getOrCreateSheet() {
       headerRange.setHorizontalAlignment('center');
 
       // Set column widths
-      sheet.setColumnWidths(1, 13, [120, 150, 180, 150, 150, 120, 120, 120, 120, 130, 130, 150, 120]);
+      sheet.setColumnWidths(1, 14, [120, 150, 180, 150, 150, 120, 120, 120, 120, 130, 130, 150, 120, 200]);
 
       // Freeze header row
       sheet.setFrozenRows(1);
@@ -106,7 +115,7 @@ function getOrCreateSheet() {
     if (!paymentsSheet) {
       paymentsSheet = ss.insertSheet('Payments_Data');
       var paymentHeaders = [
-        ['Payment ID', 'Timestamp', 'Debt ID', 'Debt Name', 'Amount Paid']
+        ['Payment ID', 'Timestamp', 'Debt ID', 'Debt Name', 'Amount Paid', 'Proof URL']
       ];
       paymentsSheet.getRange(1, 1, 1, paymentHeaders[0].length).setValues(paymentHeaders);
 
@@ -116,8 +125,26 @@ function getOrCreateSheet() {
       pHeaderRange.setFontColor('#FFFFFF');
       pHeaderRange.setHorizontalAlignment('center');
 
-      paymentsSheet.setColumnWidths(1, 5, [150, 150, 150, 180, 150]);
+      paymentsSheet.setColumnWidths(1, 6, [150, 150, 150, 180, 150, 250]);
       paymentsSheet.setFrozenRows(1);
+    }
+
+    var financeSheet = ss.getSheetByName('Finance_Data');
+    if (!financeSheet) {
+      financeSheet = ss.insertSheet('Finance_Data');
+      var financeHeaders = [
+        ['ID', 'Timestamp', 'Type', 'Category', 'Amount', 'Note']
+      ];
+      financeSheet.getRange(1, 1, 1, financeHeaders[0].length).setValues(financeHeaders);
+
+      var fHeaderRange = financeSheet.getRange(1, 1, 1, financeHeaders[0].length);
+      fHeaderRange.setFontWeight('bold');
+      fHeaderRange.setBackground('#3B82F6');
+      fHeaderRange.setFontColor('#FFFFFF');
+      fHeaderRange.setHorizontalAlignment('center');
+
+      financeSheet.setColumnWidths(1, 6, [150, 150, 120, 150, 150, 250]);
+      financeSheet.setFrozenRows(1);
     }
 
     return sheet;
@@ -153,7 +180,8 @@ function saveDebt(data) {
       dailyInterest,
       0, // Priority score (to be calculated)
       '', // Repayment priority
-      'Active'
+      'Active',
+      data.note || ''
     ];
 
     var lastRow = sheet.getLastRow() + 1;
@@ -161,7 +189,7 @@ function saveDebt(data) {
 
     // Apply formatting for warning
     if (warning) {
-      sheet.getRange(lastRow, 1, 1, 13).setBackground('#FFE5E5');
+      sheet.getRange(lastRow, 1, 1, 14).setBackground('#FFE5E5');
       sheet.getRange(lastRow, 3).setNote(warning);
     }
 
@@ -195,7 +223,7 @@ function getAllDebts() {
 
     if (lastRow <= 1) return [];
 
-    var data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+    var data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
     var debts = [];
 
     for (var i = 0; i < data.length; i++) {
@@ -214,7 +242,8 @@ function getAllDebts() {
           dailyInterest: data[i][9],
           priorityScore: data[i][10],
           repaymentPriority: data[i][11],
-          status: data[i][12]
+          status: data[i][12],
+          note: data[i][13] || ''
         });
       }
     }
@@ -232,7 +261,7 @@ function sortDebtsByPriority() {
 
     if (lastRow <= 1) return { success: false, message: 'No debts found. Please add some debts first.' };
 
-    var data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+    var data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
     var today = new Date();
 
     // Calculate priority score for active debts only
@@ -266,19 +295,19 @@ function sortDebtsByPriority() {
     }
 
     // Write back sorted data
-    sheet.getRange(2, 1, data.length, 13).setValues(data);
+    sheet.getRange(2, 1, data.length, 14).setValues(data);
 
     // Apply visual formatting for top priority
     for (var i = 0; i < data.length; i++) {
       if (data[i][11] === 'Priority 1') {
-        sheet.getRange(i + 2, 1, 1, 13).setBackground('#FFF3E0');
-        sheet.getRange(i + 2, 1, 1, 13).setFontWeight('bold');
+        sheet.getRange(i + 2, 1, 1, 14).setBackground('#FFF3E0');
+        sheet.getRange(i + 2, 1, 1, 14).setFontWeight('bold');
       } else if (data[i][9] > 0.1) {
-        sheet.getRange(i + 2, 1, 1, 13).setBackground('#FFE5E5');
+        sheet.getRange(i + 2, 1, 1, 14).setBackground('#FFE5E5');
       } else if (data[i][11] === 'Completed') {
-        sheet.getRange(i + 2, 1, 1, 13).setBackground('#E8F5E9');
+        sheet.getRange(i + 2, 1, 1, 14).setBackground('#E8F5E9');
       } else {
-        sheet.getRange(i + 2, 1, 1, 13).setBackground('#FFFFFF');
+        sheet.getRange(i + 2, 1, 1, 14).setBackground('#FFFFFF');
       }
     }
 
@@ -306,7 +335,7 @@ function getStatistics() {
       };
     }
 
-    var data = sheet.getRange(2, 1, lastRow - 1, 13).getValues();
+    var data = sheet.getRange(2, 1, lastRow - 1, 14).getValues();
     var totalDebt = 0;
     var activeCount = 0;
     var highInterestCount = 0;
@@ -363,7 +392,7 @@ function updateDebtStatus(debtId, newStatus) {
   }
 }
 
-function makePayment(debtId, amount) {
+function makePayment(debtId, amount, base64Proof, filename) {
   try {
     var sheet = getOrCreateSheet();
     var ss = SpreadsheetApp.openById(SHEET_ID);
@@ -390,6 +419,20 @@ function makePayment(debtId, amount) {
           sheet.getRange(i + 1, 13).setValue('Paid');
         }
 
+        var proofUrl = '';
+        if (base64Proof && filename) {
+          try {
+            var contentType = base64Proof.substring(5, base64Proof.indexOf(';'));
+            var bytes = Utilities.base64Decode(base64Proof.substr(base64Proof.indexOf('base64,') + 7));
+            var blob = Utilities.newBlob(bytes, contentType, filename);
+            var folder = DriveApp.getRootFolder();
+            var file = folder.createFile(blob);
+            proofUrl = file.getUrl();
+          } catch(e) {
+            console.error('File upload error: ' + e);
+          }
+        }
+
         var timestamp = new Date();
         var paymentId = 'PAY_' + timestamp.getTime();
         var paymentRow = [
@@ -397,7 +440,8 @@ function makePayment(debtId, amount) {
           timestamp,
           debtId,
           debtName,
-          paymentAmount
+          paymentAmount,
+          proofUrl
         ];
 
         paymentsSheet.appendRow(paymentRow);
@@ -424,7 +468,7 @@ function getAllPayments() {
 
     if (lastRow <= 1) return [];
 
-    var data = paymentsSheet.getRange(2, 1, lastRow - 1, 5).getValues();
+    var data = paymentsSheet.getRange(2, 1, lastRow - 1, 6).getValues();
     var payments = [];
 
     for (var i = 0; i < data.length; i++) {
@@ -433,7 +477,8 @@ function getAllPayments() {
         timestamp: (data[i][1] instanceof Date) ? data[i][1].toISOString() : data[i][1],
         debtId: data[i][2],
         debtName: data[i][3],
-        amount: data[i][4]
+        amount: data[i][4],
+        proofUrl: data[i][5]
       });
     }
 
@@ -445,5 +490,132 @@ function getAllPayments() {
     return payments;
   } catch (error) {
     return [];
+  }
+}
+
+function updateDebtDetails(debtId, updatedData) {
+  try {
+    var sheet = getOrCreateSheet();
+    var data = sheet.getDataRange().getValues();
+
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][0] === debtId) {
+        var rate = parseFloat(updatedData.interestRate);
+        var dailyInterest = calculateDailyInterest(rate, updatedData.interestType);
+
+        sheet.getRange(i + 1, 3).setValue(updatedData.debtName);
+        sheet.getRange(i + 1, 4).setValue(updatedData.debtType);
+        sheet.getRange(i + 1, 5).setValue(parseFloat(updatedData.principalBalance));
+        sheet.getRange(i + 1, 6).setValue(rate);
+        sheet.getRange(i + 1, 7).setValue(updatedData.interestType);
+        sheet.getRange(i + 1, 8).setValue(updatedData.dueDate);
+        sheet.getRange(i + 1, 9).setValue(updatedData.ojkStatus);
+        sheet.getRange(i + 1, 10).setValue(dailyInterest);
+        sheet.getRange(i + 1, 14).setValue(updatedData.note || '');
+
+        return { success: true, message: 'Debt updated successfully!' };
+      }
+    }
+    return { success: false, message: 'Debt not found.' };
+  } catch (error) {
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+function saveFinanceRecord(data) {
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var financeSheet = ss.getSheetByName('Finance_Data');
+    if (!financeSheet) {
+      getOrCreateSheet();
+      financeSheet = ss.getSheetByName('Finance_Data');
+    }
+
+    var timestamp = new Date();
+    var recordId = 'FIN_' + timestamp.getTime();
+
+    var row = [
+      recordId,
+      timestamp,
+      data.type,
+      data.category,
+      parseFloat(data.amount),
+      data.note || ''
+    ];
+
+    financeSheet.appendRow(row);
+
+    return { success: true, message: 'Finance record saved successfully!' };
+  } catch (error) {
+    return { success: false, message: 'Error: ' + error.toString() };
+  }
+}
+
+function getFinanceRecords() {
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var financeSheet = ss.getSheetByName('Finance_Data');
+    if (!financeSheet) return [];
+
+    var lastRow = financeSheet.getLastRow();
+    if (lastRow <= 1) return [];
+
+    var data = financeSheet.getRange(2, 1, lastRow - 1, 6).getValues();
+    var records = [];
+
+    for (var i = 0; i < data.length; i++) {
+      records.push({
+        id: data[i][0],
+        timestamp: (data[i][1] instanceof Date) ? data[i][1].toISOString() : data[i][1],
+        type: data[i][2],
+        category: data[i][3],
+        amount: data[i][4],
+        note: data[i][5]
+      });
+    }
+
+    records.sort(function(a, b) {
+      return new Date(b.timestamp) - new Date(a.timestamp);
+    });
+
+    return records;
+  } catch (error) {
+    return [];
+  }
+}
+
+function getFinanceSummary() {
+  try {
+    var records = getFinanceRecords();
+    var totalIncome = 0;
+    var totalOutcome = 0;
+
+    records.forEach(function(record) {
+      if (record.type === 'Income') {
+        totalIncome += parseFloat(record.amount);
+      } else if (record.type === 'Outcome') {
+        totalOutcome += parseFloat(record.amount);
+      }
+    });
+
+    var netBalance = totalIncome - totalOutcome;
+
+    var dailyCapability = netBalance > 0 ? (netBalance / 30) : 0;
+
+    return {
+      totalIncome: totalIncome,
+      totalOutcome: totalOutcome,
+      netBalance: netBalance,
+      monthlyCapability: netBalance > 0 ? netBalance : 0,
+      dailyCapability: dailyCapability
+    };
+  } catch (error) {
+    return {
+      totalIncome: 0,
+      totalOutcome: 0,
+      netBalance: 0,
+      monthlyCapability: 0,
+      dailyCapability: 0
+    };
   }
 }

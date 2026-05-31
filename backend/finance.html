@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Daily Finance Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .app-container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 3em;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      font-size: 2em;
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+      text-align: center;
+    }
+
+    .stat-icon {
+      font-size: 2em;
+      margin-bottom: 10px;
+    }
+
+    .stat-value {
+      font-size: 2em;
+      font-weight: bold;
+      color: #10B981;
+      margin: 10px 0;
+    }
+
+    .stat-label {
+      color: #666;
+      font-size: 0.9em;
+    }
+
+    .calculator-card {
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+      color: white;
+    }
+
+    .calculator-card .stat-value, .calculator-card .stat-label {
+      color: white;
+    }
+
+    .form-card {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      margin-bottom: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+
+    .section-title {
+      font-size: 1.5em;
+      font-weight: 600;
+      margin-bottom: 20px;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .input-group label {
+      font-weight: 600;
+      color: #555;
+      font-size: 0.9em;
+    }
+
+    .input-group input,
+    .input-group select {
+      padding: 12px;
+      border: 2px solid #E5E7EB;
+      border-radius: 10px;
+      font-size: 14px;
+      transition: all 0.3s;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+      color: white;
+    }
+
+    .table-container {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th {
+      text-align: left;
+      padding: 15px;
+      background: #F9FAFB;
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 2px solid #E5E7EB;
+    }
+
+    td {
+      padding: 15px;
+      border-bottom: 1px solid #F3F4F6;
+    }
+
+    .type-income {
+      color: #10B981;
+      font-weight: bold;
+    }
+
+    .type-outcome {
+      color: #EF4444;
+      font-weight: bold;
+    }
+
+    .message {
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: none;
+    }
+
+    .message-success {
+      background: #D1FAE5;
+      color: #065F46;
+      display: block;
+    }
+
+    .message-error {
+      background: #FEE2E2;
+      color: #991B1B;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <div class="header">
+      <div class="logo">💸</div>
+      <h1>Daily Finance Tracker</h1>
+      <p style="color: #666;">Track your income and expenses to discover your true debt repayment capability.</p>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div class="section-title" style="color: white;"><i class="fas fa-chart-pie"></i> Smart Dashboard</div>
+    <div id="statsContainer" class="stats-grid">
+      <!-- Stats loaded dynamically -->
+    </div>
+
+    <div class="form-card">
+      <div class="section-title">
+        <i class="fas fa-plus-circle"></i>
+        <span>Add Transaction</span>
+      </div>
+
+      <div class="form-grid">
+        <div class="input-group">
+          <label>Type</label>
+          <select id="finType">
+            <option value="Income">Income (+)</option>
+            <option value="Outcome">Outcome (-)</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label>Category</label>
+          <input type="text" id="finCategory" placeholder="e.g., Salary, Food, Rent, Entertainment">
+        </div>
+
+        <div class="input-group">
+          <label>Amount</label>
+          <input type="number" id="finAmount" min="0" step="any" placeholder="Enter amount">
+        </div>
+
+        <div class="input-group">
+          <label>Note (Optional)</label>
+          <input type="text" id="finNote" placeholder="Additional details">
+        </div>
+      </div>
+
+      <div style="margin-top: 20px;">
+        <button class="btn btn-primary" onclick="saveTransaction()" id="saveBtn">
+          <i class="fas fa-save"></i> Save Transaction
+        </button>
+      </div>
+    </div>
+
+    <div class="table-container">
+      <div class="section-title">
+        <i class="fas fa-list"></i>
+        <span>Recent Transactions</span>
+      </div>
+      <div id="recordsContainer">
+        <div style="text-align: center; padding: 20px;">Loading transactions...</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showMessage(msg, type) {
+      var msgDiv = document.getElementById('message');
+      msgDiv.textContent = msg;
+      msgDiv.className = 'message message-' + type;
+      setTimeout(() => {
+        msgDiv.className = 'message';
+      }, 5000);
+    }
+
+    function formatMoney(amount) {
+      if (!amount && amount !== 0) return '$0';
+      return '$' + amount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      var date = new Date(dateString);
+      return date.toLocaleString('en-US');
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      var div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function loadDashboard() {
+      google.script.run
+        .withSuccessHandler(function(summary) {
+          var container = document.getElementById('statsContainer');
+
+          container.innerHTML = `
+            <div class="stat-card">
+              <div class="stat-icon">💰</div>
+              <div class="stat-value">${formatMoney(summary.totalIncome)}</div>
+              <div class="stat-label">Total Income</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">🛒</div>
+              <div class="stat-value" style="color: #EF4444;">${formatMoney(summary.totalOutcome)}</div>
+              <div class="stat-label">Total Outcome</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-icon">⚖️</div>
+              <div class="stat-value" style="color: ${summary.netBalance >= 0 ? '#10B981' : '#EF4444'};">${formatMoney(summary.netBalance)}</div>
+              <div class="stat-label">Net Balance (Monthly)</div>
+            </div>
+            <div class="stat-card calculator-card">
+              <div class="stat-icon">🚀</div>
+              <div class="stat-value">${formatMoney(summary.dailyCapability)}</div>
+              <div class="stat-label">Daily Debt Repayment Capability</div>
+            </div>
+          `;
+        })
+        .getFinanceSummary();
+    }
+
+    function loadRecords() {
+      google.script.run
+        .withSuccessHandler(function(records) {
+          var container = document.getElementById('recordsContainer');
+
+          if (records.length === 0) {
+            container.innerHTML = '<div style="text-align: center; padding: 20px;">No transactions found.</div>';
+            return;
+          }
+
+          var html = `
+            <table>
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Type</th>
+                  <th>Category</th>
+                  <th>Amount</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          records.forEach(function(r) {
+            var typeClass = r.type === 'Income' ? 'type-income' : 'type-outcome';
+            var sign = r.type === 'Income' ? '+' : '-';
+
+            html += `
+              <tr>
+                <td>${formatDate(r.timestamp)}</td>
+                <td><span class="${typeClass}">${r.type}</span></td>
+                <td>${escapeHtml(r.category)}</td>
+                <td class="${typeClass}">${sign}${formatMoney(r.amount)}</td>
+                <td>${escapeHtml(r.note)}</td>
+              </tr>
+            `;
+          });
+
+          html += '</tbody></table>';
+          container.innerHTML = html;
+        })
+        .getFinanceRecords();
+    }
+
+    function refreshAll() {
+      loadDashboard();
+      loadRecords();
+    }
+
+    function saveTransaction() {
+      var data = {
+        type: document.getElementById('finType').value,
+        category: document.getElementById('finCategory').value,
+        amount: document.getElementById('finAmount').value,
+        note: document.getElementById('finNote').value
+      };
+
+      if (!data.category || !data.amount || parseFloat(data.amount) <= 0) {
+        showMessage('Please fill in valid category and amount.', 'error');
+        return;
+      }
+
+      var btn = document.getElementById('saveBtn');
+      btn.disabled = true;
+      btn.innerText = 'Saving...';
+
+      google.script.run
+        .withSuccessHandler(function(res) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-save"></i> Save Transaction';
+
+          if (res.success) {
+            showMessage(res.message, 'success');
+            document.getElementById('finCategory').value = '';
+            document.getElementById('finAmount').value = '';
+            document.getElementById('finNote').value = '';
+            refreshAll();
+          } else {
+            showMessage(res.message, 'error');
+          }
+        })
+        .withFailureHandler(function(err) {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-save"></i> Save Transaction';
+          showMessage('Error: ' + err.message, 'error');
+        })
+        .saveFinanceRecord(data);
+    }
+
+    // Init
+    refreshAll();
+  </script>
+</body>
+</html>
