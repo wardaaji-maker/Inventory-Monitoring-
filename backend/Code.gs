@@ -4,7 +4,7 @@
 // Compatible with Global Users (English/Indonesian)
 // ============================================
 
-var SHEET_ID = '1zw6V_uzHEcyLKgLpGgoxDqook0UP8Kp4QuiJyjf_SEg';
+var SHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 var sheet;
 
 function doGet(e) {
@@ -481,7 +481,6 @@ function makePayment(debtId, amount, base64Proof, filename) {
               }
 
               var file = folder.createFile(blob);
-              file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
               proofUrl = file.getUrl();
             }
           } catch(e) {
