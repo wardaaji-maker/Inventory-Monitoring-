@@ -371,6 +371,57 @@
       }
     }
 
+    /* Mobile Table Cards */
+    @media (max-width: 768px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+
+      tr {
+        background: white;
+        border: 1px solid #E5E7EB;
+        border-radius: 10px;
+        margin-bottom: 15px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        padding: 10px;
+      }
+
+      td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 45%;
+        text-align: right;
+        min-height: 40px;
+      }
+
+      td:last-child {
+        border-bottom: 0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 5px;
+      }
+
+      td:before {
+        position: absolute;
+        top: 15px;
+        left: 10px;
+        width: 40%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: 600;
+        color: #666;
+        content: attr(data-label);
+      }
+    }
+
     /* Loading */
     .loading {
       text-align: center;
@@ -1104,16 +1155,16 @@
 
             html += `
               <tr class="${priorityClass}">
-                <td>${debt.repaymentPriority || '-'}</td>
-                <td><strong>${escapeHtml(debt.debtName)}</strong></td>
-                <td>${escapeHtml(debt.debtType)}</td>
-                <td>${formatMoney(debt.principalBalance)}</td>
-                <td class="${interestClass}">${debt.dailyInterest ? debt.dailyInterest.toFixed(3) + '%' : '-'} ${debt.dailyInterest > 0.1 ? '⚠️' : ''}</td>
-                <td>${formatDate(debt.dueDate)}</td>
-                <td><span class="badge ${ojkBadge}">${debt.ojkStatus}</span></td>
-                <td><span class="badge status-active">${debt.status}</span></td>
-                <td>${escapeHtml(debt.note)}</td>
-                <td>
+                <td data-label="Priority">${debt.repaymentPriority || '-'}</td>
+                <td data-label="Debt Name"><strong>${escapeHtml(debt.debtName)}</strong></td>
+                <td data-label="Type">${escapeHtml(debt.debtType)}</td>
+                <td data-label="Balance">${formatMoney(debt.principalBalance)}</td>
+                <td data-label="Daily Interest" class="${interestClass}">${debt.dailyInterest ? debt.dailyInterest.toFixed(3) + '%' : '-'} ${debt.dailyInterest > 0.1 ? '⚠️' : ''}</td>
+                <td data-label="Due Date">${formatDate(debt.dueDate)}</td>
+                <td data-label="OJK Status"><span class="badge ${ojkBadge}">${debt.ojkStatus}</span></td>
+                <td data-label="Status"><span class="badge status-active">${debt.status}</span></td>
+                <td data-label="Note">${escapeHtml(debt.note)}</td>
+                <td data-label="Action">
                   <button class="btn btn-success" style="padding: 6px 12px; font-size: 12px; margin-bottom: 5px;" onclick='openPaymentModal("${debt.id}", ${escapeAttribute(debt.debtName)}, ${debt.principalBalance})'>
                     <i class="fas fa-money-bill-wave"></i> Pay
                   </button>
@@ -1162,11 +1213,11 @@
             var proofLink = payment.proofUrl ? `<a href="${payment.proofUrl}" target="_blank" style="color: #4F46E5; text-decoration: none;"><i class="fas fa-external-link-alt"></i> View</a>` : '-';
             html += `
               <tr>
-                <td>${formatDate(payment.timestamp)}</td>
-                <td><strong>${escapeHtml(payment.debtName) || '-'}</strong></td>
-                <td style="color: #10B981; font-weight: bold;">+${formatMoney(payment.amount)}</td>
-                <td>${proofLink}</td>
-                <td>
+                <td data-label="Date & Time">${formatDate(payment.timestamp)}</td>
+                <td data-label="Debt Name"><strong>${escapeHtml(payment.debtName) || '-'}</strong></td>
+                <td data-label="Amount Paid" style="color: #10B981; font-weight: bold;">+${formatMoney(payment.amount)}</td>
+                <td data-label="Proof">${proofLink}</td>
+                <td data-label="Action">
                   <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick='confirmDelete("payment", "${payment.paymentId}")'>
                     <i class="fas fa-trash"></i> Delete
                   </button>
@@ -1320,12 +1371,12 @@
 
             html += `
               <tr>
-                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatDate(r.timestamp)}</td>
-                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;"><span class="${typeClass}">${r.type}</span></td>
-                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${escapeHtml(r.category)}</td>
-                <td class="${typeClass}" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${sign}${formatMoney(r.amount)}</td>
-                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${escapeHtml(r.note)}</td>
-                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">
+                <td data-label="Date & Time" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatDate(r.timestamp)}</td>
+                <td data-label="Type" style="padding: 15px; border-bottom: 1px solid #F3F4F6;"><span class="${typeClass}">${r.type}</span></td>
+                <td data-label="Category" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${escapeHtml(r.category)}</td>
+                <td data-label="Amount" class="${typeClass}" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${sign}${formatMoney(r.amount)}</td>
+                <td data-label="Note" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${escapeHtml(r.note)}</td>
+                <td data-label="Action" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">
                   <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick='confirmDelete("finance", "${r.id}")'>
                     <i class="fas fa-trash"></i> Delete
                   </button>
@@ -1444,12 +1495,12 @@
             var color = b.remaining < 0 ? '#EF4444' : (b.remaining > 0 ? '#10B981' : '#666');
             html += `
               <tr>
-                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;"><strong>${escapeHtml(b.budgetName)}</strong></td>
-                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${escapeHtml(b.budgetCategory)}</td>
-                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatMoney(b.allocated)}</td>
-                <td style="color: #EF4444; padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatMoney(b.spent)}</td>
-                <td style="color: ${color}; font-weight: bold; padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatMoney(b.remaining)}</td>
-                <td style="padding: 15px; border-bottom: 1px solid #F3F4F6;">
+                <td data-label="Budget Name" style="padding: 15px; border-bottom: 1px solid #F3F4F6;"><strong>${escapeHtml(b.budgetName)}</strong></td>
+                <td data-label="Category" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${escapeHtml(b.budgetCategory)}</td>
+                <td data-label="Allocated" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatMoney(b.allocated)}</td>
+                <td data-label="Spent" style="color: #EF4444; padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatMoney(b.spent)}</td>
+                <td data-label="Remaining" style="color: ${color}; font-weight: bold; padding: 15px; border-bottom: 1px solid #F3F4F6;">${formatMoney(b.remaining)}</td>
+                <td data-label="Action" style="padding: 15px; border-bottom: 1px solid #F3F4F6;">
                   <button class="btn btn-danger" style="padding: 6px 12px; font-size: 12px;" onclick='confirmDelete("budget", "${b.id}")'>
                     <i class="fas fa-trash"></i> Delete
                   </button>
