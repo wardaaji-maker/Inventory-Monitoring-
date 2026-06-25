@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <title>Debt Dashboard - Analytics</title>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      padding: 20px;
+      background: #F9FAFB;
+    }
+    .dashboard-card {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h2 { color: #4F46E5; margin-bottom: 20px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .stat-card {
+      background: #F3F4F6;
+      border-radius: 10px;
+      padding: 15px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #4F46E5;
+      margin: 10px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th {
+      text-align: left;
+      padding: 12px;
+      background: #F9FAFB;
+      font-weight: 600;
+      color: #374151;
+      border-bottom: 2px solid #E5E7EB;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #F3F4F6;
+    }
+
+    .loading {
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-card">
+    <h2>📊 Financial Dashboard</h2>
+
+    <div id="statsContainer" class="stats-grid">
+      <div class="loading">Loading statistics...</div>
+    </div>
+
+    <h3>Recent Payments</h3>
+    <div id="paymentsContainer" style="overflow-x: auto;">
+      <div class="loading">Loading recent payments...</div>
+    </div>
+  </div>
+
+  <script>
+    function formatMoney(amount) {
+      if (!amount && amount !== 0) return '$0';
+      return '$' + amount.toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 0});
+    }
+
+    function formatDate(dateString) {
+      if (!dateString) return '-';
+      var date = new Date(dateString);
+      return date.toLocaleString('en-US');
+    }
+
+    function loadDashboardData() {
+      // Load Stats
+      google.script.run
+        .withSuccessHandler(function(stats) {
+          document.getElementById('statsContainer').innerHTML = `
+            <div class="stat-card">
+              <div class="stat-label">Total Debt</div>
+              <div class="stat-value">${formatMoney(stats.totalDebt)}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Active Debts</div>
+              <div class="stat-value">${stats.activeDebts}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">High Interest</div>
+              <div class="stat-value">${stats.highInterestDebts}</div>
+            </div>
+          `;
+        })
+        .getStatistics();
+
+      // Load Payments
+      google.script.run
+        .withSuccessHandler(function(payments) {
+          var container = document.getElementById('paymentsContainer');
+
+          if (payments.length === 0) {
+            container.innerHTML = '<p style="padding: 15px; color: #666;">No recent payments found.</p>';
+            return;
+          }
+
+          var html = `
+            <table>
+              <thead>
+                <tr>
+                  <th>Date & Time</th>
+                  <th>Debt Name</th>
+                  <th>Amount Paid</th>
+                </tr>
+              </thead>
+              <tbody>
+          `;
+
+          // Show only top 10 recent payments
+          var recentPayments = payments.slice(0, 10);
+
+          function escapeHtml(text) {
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+          }
+
+          recentPayments.forEach(function(payment) {
+            html += `
+              <tr>
+                <td>${formatDate(payment.timestamp)}</td>
+                <td><strong>${escapeHtml(payment.debtName) || '-'}</strong></td>
+                <td style="color: #10B981; font-weight: bold;">+${formatMoney(payment.amount)}</td>
+              </tr>
+            `;
+          });
+
+          html += '</tbody></table>';
+          container.innerHTML = html;
+        })
+        .getAllPayments();
+    }
+
+    // Initial load
+    loadDashboardData();
+  </script>
+</body>
+</html>
